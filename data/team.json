@@ -1,0 +1,118 @@
+{
+  "teams": {
+    "榜一萌化": [
+      {
+        "spirit": "雪影娃娃",
+        "nature": 29,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["甜心续航", "霜降", "风吹雪", "冰晶坠"]
+      },
+      {
+        "spirit": "花影羚羊",
+        "nature": 29,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["恶意逃离", "勾魂", "恶能量", "欺诈契约"]
+      },
+      {
+        "spirit": "寒音蛇",
+        "nature": 27,
+        "ivs": {"hp": 10, "atk": 10, "def": 10, "spatk": 0, "spdef": 0, "speed": 0},
+        "skills": ["月光合奏", "力量增效", "音爆", "有效预防"]
+      },
+      {
+        "spirit": "飞飞钥",
+        "nature": 29,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["磁暴", "回旋风暴", "防御", "听桥"]
+      },
+      {
+        "spirit": "九幽菇",
+        "nature": 29,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["甜心续航", "移花接木", "魔能爆", "流沙"]
+      },
+      {
+        "spirit": "加油蟹",
+        "nature": 29,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["赤子之心", "霜降", "音爆", "潮汐"]
+      }
+    ],
+    "首领罗隐": [
+      {
+        "spirit": "罗隐",
+        "nature": 1,
+        "ivs": {"hp": 10, "atk": 10, "def": 0, "spatk": 0, "spdef": 0, "speed": 10},
+        "skills": ["魔爪", "地震", "乘胜追击", "泥浆铠甲"]
+      },
+      {
+        "spirit": "海枝枝（碧蓝珊瑚）",
+        "nature": 10,
+        "ivs": {"hp": 10, "atk": 0, "def": 0, "spatk": 10, "spdef": 0, "speed": 10},
+        "skills": ["天火", "魔法增效", "影袭", "鬼火"]
+      },
+      {
+        "spirit": "加油蟹",
+        "nature": 27,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["藤绞", "旋转突击", "水幕冲击", "掩护"]
+      },
+      {
+        "spirit": "火羽",
+        "nature": 10,
+        "ivs": {"hp": 10, "atk": 0, "def": 0, "spatk": 10, "spdef": 10, "speed": 0},
+        "skills": ["鸣叫", "爆裂飞弹", "火焰切割", "虹光冲击"]
+      },
+      {
+        "spirit": "炮米花",
+        "nature": 29,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["炎枪", "爆裂飞弹", "双响炮", "闪燃"]
+      },
+      {
+        "spirit": "影狸",
+        "nature": 10,
+        "ivs": {"hp": 10, "atk": 0, "def": 0, "spatk": 10, "spdef": 0, "speed": 10},
+        "skills": ["抓挠", "幽灵爆发", "黑手", "影袭"]
+      }
+    ],
+    "魔偶地武": [
+      {
+        "spirit": "帅帅魔偶",
+        "nature": 27,
+        "ivs": {"hp": 10, "atk": 10, "def": 10, "spatk": 0, "spdef": 0, "speed": 0},
+        "skills": ["蓄能", "蓄能", "蓄能", "防御"]
+      },
+      {
+        "spirit": "布克棱岩",
+        "nature": 27,
+        "ivs": {"hp": 10, "atk": 10, "def": 10, "spatk": 0, "spdef": 0, "speed": 0},
+        "skills": ["地刺", "壁垒", "通电", "吓退"]
+      },
+      {
+        "spirit": "针叶巡林",
+        "nature": 1,
+        "ivs": {"hp": 10, "atk": 10, "def": 10, "spatk": 0, "spdef": 0, "speed": 0},
+        "skills": ["光合作用", "防御", "撕裂", "针刺射击"]
+      },
+      {
+        "spirit": "海豹船长",
+        "nature": 22,
+        "ivs": {"hp": 10, "atk": 10, "def": 0, "spatk": 0, "spdef": 0, "speed": 10},
+        "skills": ["斩断", "阻断", "力量增效", "水刃"]
+      },
+      {
+        "spirit": "食尘短绒",
+        "nature": 27,
+        "ivs": {"hp": 10, "atk": 0, "def": 10, "spatk": 0, "spdef": 10, "speed": 0},
+        "skills": ["不动如山", "翅刃", "尾后针", "通电"]
+      },
+      {
+        "spirit": "棋绮后（白子）",
+        "nature": 22,
+        "ivs": {"hp": 10, "atk": 10, "def": 0, "spatk": 0, "spdef": 0, "speed": 10},
+        "skills": ["蓄能", "化劲", "力量增效", "阻断"]
+      }
+    ]
+  }
+}
