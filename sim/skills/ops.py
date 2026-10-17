@@ -185,11 +185,38 @@ class ApplyBuff(Effect):
                 # 供"萌化状态下再获得萌化"响应类特性（拉拉队长 200288）判定，
                 # 与 traits/impl/lethal.py 化茧的施加契约一致。
                 extra_kw["pre_had"] = buffs.has_buff(pet, buffs.BuffType.CUTE)
-            buffs.add_buff(pet, self.buff_type, amount, self.duration, ctx.state.turn,
+            gained = buffs.grant_buff(pet, self.buff_type, amount, self.duration, ctx.state.turn,
                            ctx.actor.side, ctx.actor.name, self.source_kind)
-            traits.on_buff_gain(ctx.state, pet, self.buff_type, amount,
+            if gained == 0:
+                continue
+            traits.on_buff_gain(ctx.state, pet, self.buff_type, gained,
                                 source_side=ctx.actor.side, source_pet=ctx.actor.name,
                                 source_kind=self.source_kind, **extra_kw)
+
+
+@dataclass(kw_only=True)
+class BoostCounteredSkillEnergyCost(Effect):
+    """应对成功时，使被应对技能能耗+N（按技能 id 的能耗修正 buff，作用于敌方）。
+
+    buff 类型为 ``energy_cost_boost_<被应对技能id>``（buffs.skill_energy_boost_type），
+    引擎能耗计算按技能 id 并入（skill_utils.energy_modifier_before_traits）；
+    能耗增加为减益（正值 = debuff）。
+    """
+
+    value: int
+    duration: str = buffs.DurationKind.NORMAL
+
+    def apply(self, ctx: SkillContext) -> None:
+        incoming = ctx.extra.get("incoming_skill")
+        if incoming is None:
+            return
+        btype = buffs.skill_energy_boost_type(incoming.skill_id)
+        for pet in resolve_pets(ctx, ENEMY):
+            gained = buffs.grant_buff(pet, btype, self.value, self.duration,
+                                      ctx.state.turn, ctx.actor.side, ctx.actor.name)
+            if gained:
+                traits.on_buff_gain(ctx.state, pet, btype, gained,
+                                    source_side=ctx.actor.side, source_pet=ctx.actor.name)
 
 
 @dataclass(kw_only=True)
@@ -213,9 +240,11 @@ class RandomStatBuffs(Effect):
             tally[stat] = tally.get(stat, 0) + 1
         for pet in resolve_pets(ctx, self.target):
             for stat, n in tally.items():
-                buffs.add_buff(pet, stat, n, buffs.DurationKind.NORMAL, ctx.state.turn,
+                gained = buffs.grant_buff(pet, stat, n, buffs.DurationKind.NORMAL, ctx.state.turn,
                                ctx.actor.side, ctx.actor.name)
-                traits.on_buff_gain(ctx.state, pet, stat, n,
+                if gained == 0:
+                    continue
+                traits.on_buff_gain(ctx.state, pet, stat, gained,
                                     source_side=ctx.actor.side, source_pet=ctx.actor.name)
 
 
@@ -411,7 +440,7 @@ class ConvertBuffs(Effect):
                 total += buff.value
                 pet.buffs = [b for b in pet.buffs if b is not buff]
             if total > 0:
-                buffs.add_buff(pet, self.to_buff_type, total)
+                buffs.grant_buff(pet, self.to_buff_type, total)
 
 
 @dataclass(kw_only=True)
@@ -443,9 +472,9 @@ class ConvertBuffToMark(Effect):
 class DoubleBuffs(Effect):
     """目标某类效果的层数翻倍（"使敌方精灵减益的层数翻倍"）。
 
-    翻倍 = 按现有条目再叠一份同值同来源的层数（add_buff 统一负责层数钳制与
-    免疫判定，故已达上限或免疫时自然不生效）；遍历用快照，新叠出来的那份不会
-    被重复处理；与 ApplyBuff 一致广播 buff_gain（"获得增益/减益时"类特性）。
+    翻倍 = 按现有条目再叠一份同值同来源的层数；获得规则在 add_buff 前检查，
+    写入层统一负责层数钳制。遍历使用快照，新叠出的条目不会被重复处理；
+    只有实际获得层数时才广播 buff_gain。
     """
 
     kind: str = "debuff"
@@ -462,10 +491,12 @@ class DoubleBuffs(Effect):
                 if buff.buff_type == buffs.BuffType.CUTE:
                     # 与 ApplyBuff 同契约：萌化广播需携带 pre_had（拉拉队长 200288）。
                     extra_kw["pre_had"] = buffs.has_buff(pet, buffs.BuffType.CUTE)
-                buffs.add_buff(pet, buff.buff_type, buff.value, buff.duration,
+                gained = buffs.grant_buff(pet, buff.buff_type, buff.value, buff.duration,
                                ctx.state.turn, buff.source_side, buff.source_pet,
                                buff.source_kind)
-                traits.on_buff_gain(ctx.state, pet, buff.buff_type, buff.value,
+                if gained == 0:
+                    continue
+                traits.on_buff_gain(ctx.state, pet, buff.buff_type, gained,
                                     source_side=buff.source_side,
                                     source_pet=buff.source_pet,
                                     source_kind=buff.source_kind, **extra_kw)
@@ -482,40 +513,69 @@ class SwapBuffs(Effect):
             ctx.actor.buffs, pet.buffs = pet.buffs, ctx.actor.buffs
 
 
-@dataclass(kw_only=True)
-class ExtraDamage(Effect):
-    """附加伤害（不占用主伤害段，如"应对攻击：造成90威力物伤"）。
+def deal_extra_damage(ctx: SkillContext, power: int, *,
+                      element: Optional[int] = None,
+                      category: Optional[int] = None,
+                      hits: int = 1, target: str = ENEMY) -> None:
+    """附加伤害（不占用主伤害段）：直接在调用处经 calc_damage 与统一威力管线结算。
 
+    威力管线与主攻击段同一条：属性增益/减益与威力 buff 由 calc_damage 统一处理；
+    印记（攻击印记/蓄势印记/风气印记）、迸发（本次行动已取走的 active_bursts）
+    与特性威力修正（query_power）在此补齐——凡主动造成的伤害走同一口径。
     element/category 缺省沿用本次技能的属性与类别。
     """
+    elem = element if element is not None else ctx.skill.element
+    cat = category if category is not None else ctx.skill.category
+    extra_skill = BattleSkill(skill_id=-1, name=ctx.skill.name,
+                              element=elem, category=cat, power=power,
+                              energy_cost=0, desc="")
+    typechart = load_typechart()
+    for pet in resolve_pets(ctx, target):
+        percent, flat = _extra_power_modifiers(ctx, pet, extra_skill)
+        for _ in range(max(1, hits)):
+            if pet.hp <= 0:
+                break
+            result = calc_damage(ctx.actor, pet, extra_skill, typechart,
+                                 pet.defense_reduction, state=ctx.state,
+                                 is_first=ctx.is_first,
+                                 extra_power_percent=percent,
+                                 extra_power_flat=flat)
+            damage = result["damage"]
+            if damage <= 0:
+                continue
+            pet.hp = max(0, pet.hp - damage)
+            traits.emit(ctx.state, "take_damage", scope="all", side=pet.side, subject=pet,
+                        target=ctx.actor, skill=extra_skill, damage=damage,
+                        hit_count=1, is_first=ctx.is_first)
 
-    power: int
-    element: Optional[int] = None
-    category: Optional[int] = None
-    hits: int = 1
-    target: str = ENEMY
 
-    def apply(self, ctx: SkillContext) -> None:
-        element = self.element if self.element is not None else ctx.skill.element
-        category = self.category if self.category is not None else ctx.skill.category
-        extra_skill = BattleSkill(skill_id=-1, name=ctx.skill.name,
-                                  element=element, category=category, power=self.power,
-                                  energy_cost=0, desc="")
-        typechart = load_typechart()
-        for pet in resolve_pets(ctx, self.target):
-            for _ in range(max(1, self.hits)):
-                if pet.hp <= 0:
-                    break
-                result = calc_damage(ctx.actor, pet, extra_skill, typechart,
-                                     pet.defense_reduction, state=ctx.state,
-                                     is_first=ctx.is_first)
-                damage = result["damage"]
-                if damage <= 0:
-                    continue
-                pet.hp = max(0, pet.hp - damage)
-                traits.emit(ctx.state, "take_damage", scope="all", side=pet.side, subject=pet,
-                            target=ctx.actor, skill=extra_skill, damage=damage,
-                            hit_count=1, is_first=ctx.is_first)
+def _extra_power_modifiers(ctx: SkillContext, target_pet, extra_skill) -> tuple:
+    """附加伤害的威力修正（百分比, 固定值），与 battle 主攻击段同口径。
+
+    属性增益/减益与威力 buff（SKILL_POWER_*）由 calc_damage 内部处理；
+    这里只补：印记、迸发（行动时已取走的 active_bursts，经 ctx.extra 传入）、
+    特性威力修正（query_power，按附加伤害自身的属性/类别匹配）。
+    """
+    percent = 0.0
+    flat = 0.0
+    positive = marks.get_mark(ctx.state, ctx.actor.side, marks.POSITIVE)
+    if positive is not None:
+        if positive["id"] == 0:
+            percent += 10.0 * positive["stacks"]
+        if positive["id"] == 2:
+            percent += 30.0 * positive["stacks"]
+        if positive["id"] == 12 and ctx.is_first:
+            percent += 20.0 * positive["stacks"]
+    for active_burst in ctx.extra.get("active_bursts", ()):
+        if active_burst["type"] == "attack_power_flat":
+            flat += active_burst["value"]
+        if active_burst["type"] == "attack_power_percent":
+            percent += active_burst["value"]
+    percent, flat = traits.query_power(
+        ctx.state, ctx.actor, target_pet, percent, flat,
+        is_first=ctx.is_first, skill=extra_skill,
+    )
+    return percent, flat
 
 
 @dataclass(kw_only=True)
@@ -755,14 +815,14 @@ class IsCounter(Condition):
 
 @dataclass(kw_only=True)
 class CanCute(Condition):
-    """自己能够获得萌化（存在前一进化阶段）。
+    """自己能够获得萌化（可退化，或已有萌化且特性允许再次获得）。
 
     "自己获得萌化：X"族技能的前置条件——**能获得萌化才给 X**，不能萌化时
     门内效果一律不执行（配合 When 条件门，S18）；萌化本身在技能结算之后施加。
     """
 
     def test(self, ctx: SkillContext) -> bool:
-        return can_cute(ctx.actor)
+        return buffs.can_gain_buff(ctx.actor, buffs.BuffType.CUTE, 1)
 
 
 @dataclass(kw_only=True)

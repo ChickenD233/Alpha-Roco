@@ -40,6 +40,7 @@ import copy
 from ... import buffs as B
 from ... import burst
 from ... import marks as M
+from ... import skill_utils
 from ... import traits as T
 from ...enums import Element as E
 from ..base import TraitHandler
@@ -141,8 +142,8 @@ class LibraryGuardian(TraitHandler):
             return
         if ctx.state.magic[ctx.actor.side] != 1:
             return
-        B.add_buff(ctx.actor, B.BuffType.ATK, 10, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.SPATK, 10, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ATK, 10, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPATK, 10, source_kind="trait")
 
 
 # ---------------- 200126 洁癖 ----------------
@@ -156,10 +157,181 @@ class Cleanliness(TraitHandler):
         if ctx.subject is not ctx.actor:
             return
         incoming = ctx.extra.get("incoming")
+        inherited = [b for b in ctx.actor.buffs if b.is_gain() or b.is_loss()]
+        if incoming is None:
+            # 技能脱离时替补尚未选定；在普通状态被清除前保存快照。
+            ctx.state.pending_entry_buffs[ctx.actor.side].extend(
+                (b.buff_type, b.value, b.duration, b.source_side, b.source_pet, b.source_kind)
+                for b in inherited
+            )
+            return
+        for buff in inherited:
+            B.grant_buff(
+                incoming, buff.buff_type, buff.value, buff.duration, ctx.state.turn,
+                buff.source_side, buff.source_pet, buff.source_kind,
+            )
+
+
+# ---------------- 200160 搜刮 ----------------
+class Scavenge(TraitHandler):
+    trait_id = 200160
+    name = "搜刮"
+    desc = "敌方每使用1次「聚能」技能或更换精灵，自己入场时获得魔攻+20%。"
+    implemented = True
+
+    def _enemy(self, ctx):
+        return ctx.subject is not None and ctx.subject.side != ctx.actor.side
+
+    def on_charge(self, ctx):
+        # 敌方聚能（场下也计数，charge 广播覆盖场下）
+        if self._enemy(ctx):
+            ctx.add_state("charges", 1)
+
+    def on_leave(self, ctx):
+        # 敌方更换精灵（换入者与离场者不同才算"更换"；返场 incoming 是自己，不算）
+        if not self._enemy(ctx):
+            return
+        incoming = ctx.extra.get("incoming")
+        if incoming is None or incoming is ctx.subject:
+            return
+        ctx.add_state("charges", 1)
+
+    def on_faint(self, ctx):
+        # 敌方力竭（随后换入新精灵 = 更换精灵）
+        if self._enemy(ctx):
+            ctx.add_state("charges", 1)
+
+    def on_entry(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        # 按累计次数刷新魔攻 buff（2层/次 = +20%/次）；次数保留、不随入场清零
+        old = ctx.state_of("buff")
+        if old is not None and old in ctx.actor.buffs:
+            ctx.actor.buffs.remove(old)
+        charges = ctx.state_of("charges", 0)
+        if charges <= 0:
+            ctx.set_state("buff", None)
+            return
+        buff = B.Buff(
+            buff_type=B.BuffType.SPATK,
+            value=charges * 2,
+            duration=B.DurationKind.NORMAL,
+            source_kind="trait",
+        )
+        ctx.actor.buffs.append(buff)
+        ctx.set_state("buff", buff)
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("charges", 0)
+        if n <= 0:
+            return None
+        return [{"name": "魔攻", "layers": n, "per": "20%", "gain": True}]
+
+
+# ---------------- 280036 扫荡 ----------------
+class Raid(Scavenge):
+    trait_id = 280036
+    name = "扫荡"
+    desc = "敌方每使用1次「聚能」技能或更换精灵，自己入场时获得魔攻+20%和魔防+10%。"
+    implemented = True
+
+    def on_entry(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        # 计数逻辑继承自搜刮；入场时刷新魔攻（2层/次）与魔防（1层/次）
+        old = ctx.state_of("buffs") or []
+        for b in old:
+            if b in ctx.actor.buffs:
+                ctx.actor.buffs.remove(b)
+        charges = ctx.state_of("charges", 0)
+        if charges <= 0:
+            ctx.set_state("buffs", None)
+            return
+        new_buffs = [
+            B.Buff(buff_type=B.BuffType.SPATK, value=charges * 2,
+                   duration=B.DurationKind.NORMAL, source_kind="trait"),
+            B.Buff(buff_type=B.BuffType.SPDEF, value=charges,
+                   duration=B.DurationKind.NORMAL, source_kind="trait"),
+        ]
+        ctx.actor.buffs.extend(new_buffs)
+        ctx.set_state("buffs", new_buffs)
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("charges", 0)
+        if n <= 0:
+            return None
+        return [
+            {"name": "魔攻", "layers": n, "per": "20%", "gain": True},
+            {"name": "魔防", "layers": n, "per": "10%", "gain": True},
+        ]
+
+
+# ---------------- 200156 下黑手 ----------------
+class SuckerPunch(TraitHandler):
+    trait_id = 200156
+    name = "下黑手"
+    desc = "敌方精灵离场后，更换入场的精灵获得5层中毒。"
+    implemented = True
+
+    def on_leave(self, ctx):
+        # 敌方精灵离场时，给更换入场的精灵施加 5 层中毒（debuff 标记，含毒系免疫检查）
+        if ctx.subject is None or ctx.subject.side == ctx.actor.side:
+            return
+        incoming = ctx.extra.get("incoming")
         if incoming is None:
             return
-        for buff in list(ctx.actor.buffs):
-            incoming.buffs.append(copy.copy(buff))
+        B.grant_buff(
+            incoming,
+            B.BuffType.POISON,
+            5,
+            source_side=ctx.actor.side,
+            source_pet=ctx.actor.name,
+            source_kind="debuff",
+        )
+
+
+# ---------------- 200325 旧玩具 ----------------
+class OldToy(TraitHandler):
+    trait_id = 200325
+    name = "旧玩具"
+    desc = "己方精灵每使用过1个不同系别的技能，自己入场时获得双攻+10%。"
+    implemented = True
+
+    def on_skill_end(self, ctx):
+        # 己方精灵（含自己，场下时队友使用也计入）使用技能：按系别去重累计
+        if ctx.skill is None:
+            return
+        if ctx.side != ctx.actor.side:
+            return
+        elements = ctx.state_of("elements", None)
+        if elements is None:
+            elements = set()
+            ctx.set_state("elements", elements)
+        elements.add(ctx.skill.element)
+
+    def on_entry(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        n = len(ctx.state_of("elements", set()))
+        # 刷新为当前不同系别数：移除本特性的双攻 buff 再按 n 重加（不叠加）
+        ctx.actor.buffs = [
+            b
+            for b in ctx.actor.buffs
+            if not (
+                b.buff_type in (B.BuffType.ATK, B.BuffType.SPATK)
+                and b.source_kind == "trait"
+            )
+        ]
+        if n <= 0:
+            return
+        B.grant_buff(ctx.actor, B.BuffType.ATK, n, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPATK, n, source_kind="trait")
+
+    def display(self, state, pet):
+        n = len(pet.trait_state.get("elements", set()))
+        if n <= 0:
+            return None
+        return [{"name": "双攻", "layers": n, "per": "10%", "gain": True}]
 
 
 # ---------------- 200161 做噩梦 ----------------
@@ -218,14 +390,38 @@ class CoralBone(TraitHandler):
             return
         if ctx.subject is None or ctx.subject.side == ctx.actor.side:
             return
-        B.add_buff(ctx.actor, B.BuffType.ENERGY_COST, -3, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ENERGY_COST, -3, source_kind="trait")
         ctx.add_state("triggers", 1)
 
     def display(self, state, pet):
         n = pet.trait_state.get("triggers", 0)
         if n <= 0:
             return None
-        return [{"name": "能耗", "layers": n, "per": "3", "gain": True}]
+        return [{"name": "能耗", "layers": n, "per": "3", "gain": False}]
+
+
+# ---------------- 200169 蓄电池 ----------------
+class Battery(TraitHandler):
+    trait_id = 200169
+    name = "蓄电池"
+    desc = "每入场1次，永久获得双攻+30%。"
+    implemented = True
+
+    def on_entry(self, ctx):
+        # 每次入场（首发/主动换人/力竭替换/脱离换人/返场）都叠加双攻+30%（PERMANENT）
+        if ctx.subject is not ctx.actor:
+            return
+        B.grant_buff(ctx.actor, B.BuffType.ATK, 3, B.DurationKind.PERMANENT,
+                     source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPATK, 3, B.DurationKind.PERMANENT,
+                     source_kind="trait")
+        ctx.add_state("entries", 1)
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("entries", 0)
+        if n <= 0:
+            return None
+        return [{"name": "双攻", "layers": n, "per": "30%", "gain": True}]
 
 
 # ---------------- 200102 地脉 ----------------
@@ -279,14 +475,14 @@ class Guardian(TraitHandler):
             n += B.get_buff_value(pet, B.BuffType.CUTE)
         if n <= 0:
             return
-        B.add_buff(ctx.actor, B.BuffType.ENERGY_COST, -n, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ENERGY_COST, -n, source_kind="trait")
         ctx.set_state("layers", n)
 
     def display(self, state, pet):
         n = pet.trait_state.get("layers", 0)
         if n <= 0:
             return None
-        return [{"name": "能耗", "layers": n, "per": "1", "gain": True}]
+        return [{"name": "能耗", "layers": n, "per": "1", "gain": False}]
 
 
 # ---------------- 200110 水翼推进 ----------------
@@ -316,7 +512,51 @@ class HydroPropulsion(TraitHandler):
             for b in ctx.actor.buffs
             if not (b.buff_type == B.BuffType.ENERGY_COST and b.source_kind == "trait")
         ]
-        B.add_buff(ctx.actor, B.BuffType.ENERGY_COST, -charges, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ENERGY_COST, -charges, source_kind="trait")
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("charges", 0)
+        if n <= 0:
+            return None
+        return [{"name": "积累", "layers": n, "per": "1", "gain": True}]
+
+
+# ---------------- 280005 水翼飞升 ----------------
+class HydroAscend(TraitHandler):
+    trait_id = 280005
+    name = "水翼飞升"
+    desc = "己方精灵每使用1次水系技能，自己入场时获得全技能能耗-1，且能耗为0的技能威力+30%。"
+    implemented = True
+
+    def on_skill_end(self, ctx):
+        # 全程累计：己方精灵使用水系技能（自己在场与否都累计）
+        if ctx.skill is None or ctx.skill.element != WATER:
+            return
+        if ctx.side != ctx.actor.side:
+            return
+        ctx.add_state("charges", 1)
+
+    def on_entry(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        charges = ctx.state_of("charges", 0)
+        if charges <= 0:
+            return
+        # 刷新为当前累计数：先移除旧的特性能耗 buff，再加新的（不叠加）
+        ctx.actor.buffs = [
+            b
+            for b in ctx.actor.buffs
+            if not (b.buff_type == B.BuffType.ENERGY_COST and b.source_kind == "trait")
+        ]
+        B.grant_buff(ctx.actor, B.BuffType.ENERGY_COST, -charges, source_kind="trait")
+
+    def modify_power(self, ctx):
+        # 真实能耗为 0 的技能威力+30%（含被本特性降到 0 的技能）
+        if ctx.target is not ctx.actor or ctx.skill is None:
+            return (0.0, 0.0)
+        if skill_utils.true_energy_cost(ctx.state, ctx.actor, ctx.skill) != 0:
+            return (0.0, 0.0)
+        return (30.0, 0.0)
 
     def display(self, state, pet):
         n = pet.trait_state.get("charges", 0)
@@ -374,9 +614,9 @@ class SwarmCheer(TraitHandler):
                 n += 1
         if n <= 0:
             return
-        B.add_buff(ctx.actor, B.BuffType.ATK, n, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.DEF, n, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.SPEED_PERCENT, n, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ATK, n, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.DEF, n, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPEED_PERCENT, n, source_kind="trait")
         ctx.set_state("count", n)
 
     def display(self, state, pet):
@@ -420,9 +660,9 @@ class GelatinSheet(TraitHandler):
         incoming = ctx.extra.get("incoming")
         if incoming is None:
             return
-        B.add_buff(incoming, B.BuffType.DEF, 2)
-        B.add_buff(incoming, B.BuffType.SPDEF, 2)
-        B.add_buff(incoming, B.BuffType.FREEZE_IMMUNE, 1)
+        B.grant_buff(incoming, B.BuffType.DEF, 2)
+        B.grant_buff(incoming, B.BuffType.SPDEF, 2)
+        B.grant_buff(incoming, B.BuffType.FREEZE_IMMUNE, 1)
 
 
 # ---------------- 200254 美拉德反应 ----------------
@@ -440,9 +680,9 @@ class MaillardReaction(TraitHandler):
         incoming = ctx.extra.get("incoming")
         if incoming is None:
             return
-        B.add_buff(incoming, B.BuffType.ATK, 2)
-        B.add_buff(incoming, B.BuffType.SPATK, 2)
-        B.add_buff(incoming, B.BuffType.BURN_IMMUNE, 1)
+        B.grant_buff(incoming, B.BuffType.ATK, 2)
+        B.grant_buff(incoming, B.BuffType.SPATK, 2)
+        B.grant_buff(incoming, B.BuffType.BURN_IMMUNE, 1)
 
 
 # ---------------- 200202 茶多酚 ----------------
@@ -461,7 +701,7 @@ class TeaPolyphenol(TraitHandler):
             return
         heal = int(incoming.max_hp * 0.2)
         incoming.hp = min(incoming.max_hp, incoming.hp + heal)
-        B.add_buff(incoming, B.BuffType.LEECH_IMMUNE, 1)
+        B.grant_buff(incoming, B.BuffType.LEECH_IMMUNE, 1)
 
 
 # ---------------- 200163 快充 ----------------
@@ -559,7 +799,7 @@ class Thirst(TraitHandler):
     def on_entry(self, ctx):
         if ctx.subject is not ctx.actor:
             return
-        B.add_buff(ctx.actor, B.BuffType.LIFESTEAL, 5, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.LIFESTEAL, 5, source_kind="trait")
         ctx.set_state("active", True)
 
     def display(self, state, pet):
@@ -577,10 +817,10 @@ class RareBeastFlower(TraitHandler):
     implemented = True
 
     def _self_buff(self, ctx, buff_type, value):
-        B.add_buff(ctx.actor, buff_type, value)
+        B.grant_buff(ctx.actor, buff_type, value)
 
     def _enemy_buff(self, ctx, target, buff_type, value):
-        B.add_buff(
+        B.grant_buff(
             target,
             buff_type,
             value,
@@ -609,14 +849,8 @@ class RareBeastFlower(TraitHandler):
         elif bloodline == E.EARTH:
             self._enemy_buff(ctx, target, B.BuffType.SPEED, -6)
             self._enemy_buff(ctx, target, B.BuffType.HIT_COUNT_FLAT, -3)
-            display.append(
-                {"name": "敌方速度", "layers": 6, "per": "10", "gain": False}
-            )
-            display.append(
-                {"name": "敌方连击数", "layers": 3, "per": "1", "gain": False}
-            )
         elif bloodline == E.ICE:
-            B.add_buff(
+            B.grant_buff(
                 target,
                 B.BuffType.FREEZE,
                 2,
@@ -624,57 +858,36 @@ class RareBeastFlower(TraitHandler):
                 source_pet=ctx.actor.name,
                 source_kind="debuff",
             )
-            display.append(
-                {"name": "敌方冻结", "layers": 2, "per": "5%", "gain": False}
-            )
         elif bloodline == E.CUTE:
             self._enemy_buff(ctx, target, B.BuffType.ATK, -6)
             self._enemy_buff(ctx, target, B.BuffType.SPATK, -6)
-            display.append(
-                {"name": "敌方双攻", "layers": 6, "per": "10%", "gain": False}
-            )
         elif bloodline == E.FIRE:
             self._enemy_buff(ctx, target, B.BuffType.BURN, 6)
-            display.append(
-                {"name": "敌方灼烧", "layers": 6, "per": "2%", "gain": False}
-            )
         elif bloodline == E.DRAGON:
             self._enemy_buff(ctx, target, B.BuffType.SPDEF, -8)
-            display.append(
-                {"name": "敌方魔防", "layers": 8, "per": "10%", "gain": False}
-            )
         elif bloodline == E.MECH:
             self._self_buff(ctx, B.BuffType.DEF, 6)
             self._self_buff(ctx, B.BuffType.SPDEF, 6)
             display.append({"name": "双防", "layers": 6, "per": "10%", "gain": True})
         elif bloodline == E.WATER:
             self._self_buff(ctx, B.BuffType.ENERGY_COST, -2)
-            display.append({"name": "能耗", "layers": 2, "per": "1", "gain": True})
+            display.append({"name": "能耗", "layers": 2, "per": "1", "gain": False})
         elif bloodline == E.ELECTRIC:
             self._self_buff(ctx, B.BuffType.SPEED, 10)
             display.append({"name": "速度", "layers": 10, "per": "10", "gain": True})
         elif bloodline == E.FANTASY:
             M.add_mark(ctx.state, target.side, 7, 2)
-            display.append(
-                {"name": "敌方星陨印记", "layers": 2, "per": "1", "gain": False}
-            )
         elif bloodline == E.GRASS:
             heal = int(ctx.actor.max_hp * 0.2)
             ctx.actor.hp = min(ctx.actor.max_hp, ctx.actor.hp + heal)
             display.append({"name": "回复", "layers": 20, "per": "%", "gain": True})
         elif bloodline == E.POISON:
             self._enemy_buff(ctx, target, B.BuffType.POISON, 2)
-            display.append(
-                {"name": "敌方中毒", "layers": 2, "per": "3%", "gain": False}
-            )
         elif bloodline == E.LIGHT:
             self._self_buff(ctx, B.BuffType.SPATK, 8)
             display.append({"name": "魔攻", "layers": 8, "per": "10%", "gain": True})
         elif bloodline == E.BUG:
             self._enemy_buff(ctx, target, B.BuffType.DEF, -8)
-            display.append(
-                {"name": "敌方物防", "layers": 8, "per": "10%", "gain": False}
-            )
         elif bloodline == E.DARK:
             self._self_buff(ctx, B.BuffType.LIFESTEAL, 5)
             display.append({"name": "吸血", "layers": 5, "per": "10%", "gain": True})
@@ -683,7 +896,6 @@ class RareBeastFlower(TraitHandler):
             display.append({"name": "物攻", "layers": 8, "per": "10%", "gain": True})
         elif bloodline == E.GHOST:
             target.energy = max(0, target.energy - 2)
-            display.append({"name": "敌方能量", "layers": 2, "per": "1", "gain": False})
         elif bloodline == E.WING:
             self._self_buff(ctx, B.BuffType.HIT_COUNT_FLAT, 3)
             display.append({"name": "连击数", "layers": 3, "per": "1", "gain": True})
@@ -722,6 +934,12 @@ def register_entry() -> None:
         MaillardReaction,
         TeaPolyphenol,
         QuickCharge,
+        Scavenge,
+        Raid,
+        Battery,
+        SuckerPunch,
+        HydroAscend,
+        OldToy,
     ):
         register(cls())
 

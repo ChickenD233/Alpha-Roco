@@ -35,3 +35,4 @@ from . import buff_gain  # noqa: F401  增益响应类（on_buff_gain）
 from . import resource  # noqa: F401  资源转移类（on_heal / on_energy_gain）
 from . import counter  # noqa: F401  应对类（on_counter）
 from . import morph  # noqa: F401  巧变类（morph_pool 填充）
+from . import star  # noqa: F401  星陨印记相关（modify_star_consume）

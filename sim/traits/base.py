@@ -170,8 +170,8 @@ class TraitHandler:
         """获得能量（ctx.energy_gain）。"""
 
     def on_dot_damage(self, ctx: TraitContext) -> None:
-        """属性伤害结算（中毒/灼烧/寄生/冻结等回合结束伤害；ctx.subject=受击精灵）。
-        接入点：buffs.py 的 _apply_poison/_apply_burn/_apply_leech/_apply_freeze（待接入）。"""
+        """属性伤害结算（中毒/灼烧/寄生等回合结束伤害；冻结斩杀不属于伤害；ctx.subject=受击精灵）。
+        接入点：buffs.py 的 _apply_poison/_apply_burn/_apply_leech（待接入）。"""
 
     def on_heal(self, ctx: TraitContext) -> None:
         """回复生命（ctx.heal，ctx.extra["base_heal"]=修正前数值）。"""
@@ -181,6 +181,14 @@ class TraitHandler:
 
     def on_revive(self, ctx: TraitContext) -> None:
         """复活（力竭后复活，可上场）。"""
+
+    def allow_cute_reapplication(self, pet: BattlePet) -> bool:
+        """已有萌化时是否允许再次获得萌化而不继续退化；默认不允许。"""
+        return False
+
+    def allow_cute_beyond_limit(self, pet: BattlePet) -> bool:
+        """无法继续退化时是否仍可获得萌化 buff（无忧无虑 200182：萌化层数不受可退化次数限制）；默认不允许。"""
+        return False
 
     # ================= 修正钩子 =================
     # 修正查询默认只作用于"被查询精灵自身"的特性；
@@ -203,6 +211,15 @@ class TraitHandler:
     def modify_speed(self, ctx: TraitContext) -> int:
         """速度增量。"""
         return 0
+
+    def modify_priority(self, ctx: TraitContext) -> int:
+        """行动先手值增量（"迅捷技能先手+1"类）；ctx.skill 可用。"""
+        return 0
+
+    def modify_star_consume(self, ctx: TraitContext, stacks: int) -> Optional[int]:
+        """星陨印记触发时消耗的层数（守望星 200210"仅消耗一半"类）：
+        返回非 None 覆盖默认全部消耗；ctx.target=触发方（攻击方）。"""
+        return None
 
     def modify_damage_dealt(self, ctx: TraitContext) -> float:
         """造成伤害乘数增量（-0.4 = -40%）。"""
@@ -236,7 +253,9 @@ class TraitHandler:
         """获得能量增量。"""
         return 0
 
-    def modify_energy_shortfall(self, ctx: TraitContext, need: int, dry_run: bool = False) -> int:
+    def modify_energy_shortfall(
+        self, ctx: TraitContext, need: int, dry_run: bool = False
+    ) -> int:
         """能量不足兜底（"能量不足时消耗5%生命代替1能量"类）：
         返回可补充的能量数，handler 自行支付代价；need=缺口。
         dry_run=True 为选择校验探测：不得支付代价，只回答"当前状态能否补足"

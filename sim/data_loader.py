@@ -214,6 +214,11 @@ def calc_stat(base_stat: int, iv: int, nature_multiplier: float = 1.0) -> int:
     )
 
 
+def calc_speed_range(base_speed: int) -> list:
+    """按当前形态种族速度计算对外显示的基础速度范围。"""
+    return [calc_stat(base_speed, 0, 0.9), calc_stat(base_speed, 10, 1.2)]
+
+
 def calc_hp(base_hp: int, iv: int, nature_multiplier: float = 1.0) -> int:
     growth = 0.01 * base_hp + 0.005 * iv * 6
     return round_half_up(round_half_up(70 + growth * 170) * nature_multiplier) + 100
@@ -274,10 +279,7 @@ def make_battle_pet(
             )
         )
     stats = calc_all_stats(spirit["stats"], ivs=ivs, nature=nature)
-    speed_range = [
-        calc_stat(spirit["stats"]["speed"], 0, 0.9),
-        calc_stat(spirit["stats"]["speed"], 10, 1.2),
-    ]
+    speed_range = calc_speed_range(spirit["stats"]["speed"])
     trait_id = None
     feature = spirit.get("feature") or {}
     if feature.get("id") is not None:

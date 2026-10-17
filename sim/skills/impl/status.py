@@ -3,7 +3,7 @@
 与 defense.py / attack.py 同约定：效果全部以代码定义，desc 不参与运行时；
 能耗/属性沿用 skills.json。
 
-进度以 ``data/skills.json`` 的 ``done``/``tested`` 标志为准（与 traits 同约定）。
+进度以 ``data/skills.json`` 的 ``done``/``tested`` 标志为准。
 """
 
 from __future__ import annotations
@@ -50,8 +50,8 @@ class BuffStatus(OpsSkill):
     """纯 buff 状态技：desc 只有"自己/敌方获得 X"，无其他效果。
 
     数值换算约定（填表人负责）：属性增益 10% = 1 层（get_stat_multiplier =
-    1 + 层数×0.1）；速度每层 +10；冻结由 add_buff 强制 PERMANENT（回合末
-    按层数做力竭判定，见 buffs._apply_freeze）；其余常规时长的增益离场清除（B28）、
+    1 + 层数×0.1）；速度每层 +10；冻结由 add_buff 强制 PERMANENT（生命变动或获得冻结后
+    实时检查斩杀，见 buffs.check_freeze）；其余常规时长的增益离场清除（B28）、
     可被驱散（S26：全部增益/减益，含永久时长；特性自身的展示效果不算增益/减益）。新增同类技能只在对应表加一行。
     """
 
@@ -144,7 +144,7 @@ register(RestHeal())
 class Borrow(OpsSkill):
     """每回合随机变成己方队伍中其他精灵的技能。
 
-    每回合巧变由引擎统一处理（battle._apply_turn_morphs_for_pet）：入场即抽取、
+    每回合替换由引擎统一处理（battle._apply_round_replacements_for_pet）：入场即抽取、
     在场时每回合末重随、离场还原为本体。池 = 己方其他**存活**精灵携带的技能，
     按 id 从 skills.json 重建**原始状态**——不带对方的运行时成长
     （对方的水炮已成长到 3 费时，抽到的是原始 5 费）。
@@ -155,16 +155,16 @@ class Borrow(OpsSkill):
     name = "借用"
     category = 3
     implemented = True
-    turn_morph = True
+    round_replace = True
 
-    def turn_morph_pool(self, state, pet, skill):
+    def round_replace_pool(self, state, pet, skill):
         skill_map = build_skill_map()
         return [
             skill_by_id(s.skill_id)
             for p in state.teams[pet.side]
             if p is not pet and p.hp > 0
             for s in p.skills
-            if s.skill_id in skill_map
+            if s.skill_id in skill_map and s.skill_id != 9999999
         ]
 
 
@@ -177,17 +177,17 @@ class ThoughtSteal(OpsSkill):
 
     池 = 敌方队伍中**存活**精灵携带的技能，同样按 id 从 skills.json 重建
     原始状态（不含对方的运行时成长）；临时技能能耗 -2
-    （turn_morph_cost_delta）。其余同借用。
+    （round_replace_cost_delta）。其余同借用。
     """
 
     skill_id = 7020850
     name = "取念"
     category = 3
     implemented = True
-    turn_morph = True
-    turn_morph_cost_delta = -2
+    round_replace = True
+    round_replace_cost_delta = -2
 
-    def turn_morph_pool(self, state, pet, skill):
+    def round_replace_pool(self, state, pet, skill):
         enemy_side = "B" if pet.side == "A" else "A"
         skill_map = build_skill_map()
         return [
@@ -195,7 +195,7 @@ class ThoughtSteal(OpsSkill):
             for p in state.teams[enemy_side]
             if p.hp > 0
             for s in p.skills
-            if s.skill_id in skill_map
+            if s.skill_id in skill_map and s.skill_id != 9999999
         ]
 
 
@@ -219,10 +219,10 @@ class Rewrite(OpsSkill):
     name = "复写"
     category = 3
     implemented = True
-    turn_morph = True
-    turn_morph_cost_delta = -2
+    round_replace = True
+    round_replace_cost_delta = -2
 
-    def turn_morph_pool(self, state, pet, skill):
+    def round_replace_pool(self, state, pet, skill):
         spirit = next(
             (sp for sp in load_spirits() if sp["id"] == pet.spirit_id), None
         )
@@ -232,12 +232,17 @@ class Rewrite(OpsSkill):
         skill_map = build_skill_map()
         pool_ids = [
             sid for sid in spirit["skills"]["normal"]
-            if sid not in carried and sid in skill_map
+            if sid not in carried and sid in skill_map and sid != 9999999
         ]
         # 血脉技能池：只取血脉编号与当前血脉一致的条目
         for entry in spirit["skills"].get("bloodline", []):
             sid = entry["skillId"]
-            if entry["bloodline"] == pet.bloodline and sid not in carried and sid in skill_map:
+            if (
+                entry["bloodline"] == pet.bloodline
+                and sid not in carried
+                and sid in skill_map
+                and sid != 9999999
+            ):
                 pool_ids.append(sid)
         return [skill_by_id(sid) for sid in pool_ids]
 
@@ -557,7 +562,7 @@ class FreezingPoint(OpsSkill):
 
     本体（STAGE_STATUS）施加 5 层；应对防御成功（对方本回合使用防御行动）
     时 STAGE_COUNTER 再追加 5 层（合计 10 层，两次独立施加、两个事件）。
-    冻结的永久性与回合末力竭判定同霜降（buffs._apply_freeze）。
+    冻结的永久性与实时斩杀判定同霜降（buffs.check_freeze）。
     """
 
     skill_id = 7090400
@@ -739,7 +744,7 @@ class Superposition(OpsSkill):
       魔防/速度之一，按属性汇总后逐种施加（每种属性一次施加、一个事件）。
     - 巧变池 = skills.json 中全部幻系（element 17）攻击技能（category 0/1，
       按结构化字段过滤，不解析 desc，无需人工分组）；用后随机变成其一
-      （能耗-1），该临时技能用后还原（引擎 _apply_morph 既有规则）。
+      （能耗-1），该临时技能用后还原（引擎 _apply_morph（真正巧变）规则）。
     """
 
     skill_id = 7190430

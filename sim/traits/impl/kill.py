@@ -10,10 +10,14 @@
 from __future__ import annotations
 
 from ... import buffs as B
+from ... import skills as SK
 from ... import traits as T
 from ...enums import Element
+from ...models import BattleSkill
 from ..base import TraitHandler
 from ..registry import register
+
+WISH_TRAIT_SKILL_ID = -2  # 特性替换版愿力冲击（共鸣魔法版为 -1，静态威力且回合末还原）
 
 
 # ---------------- 200141 付给恶魔的赎价 ----------------
@@ -149,10 +153,10 @@ class DemonFeast(TraitHandler):
         if ctx.target is not ctx.actor:
             return
         # 双攻+50% = 物攻/魔攻各 +5 层（每层10%），PERMANENT 下场不消失
-        B.add_buff(
+        B.grant_buff(
             ctx.actor, B.BuffType.ATK, 5, B.DurationKind.PERMANENT, source_kind="trait"
         )
-        B.add_buff(
+        B.grant_buff(
             ctx.actor,
             B.BuffType.SPATK,
             5,
@@ -168,12 +172,92 @@ class DemonFeast(TraitHandler):
         return [{"name": "双攻", "layers": n, "per": "50%", "gain": True}]
 
 
+# ---------------- 280025 裁决 / 280026 滋养 / 280027 点燃 / 280028 净化 ----------------
+def _wish_skill(pet, element):
+    """构造特性替换版愿力冲击（永久替换、不还原；威力 80，应对状态经 handler 加倍）。"""
+    category = 0 if pet.stats["atk"] >= pet.stats["spatk"] else 1
+    wish = BattleSkill(
+        skill_id=WISH_TRAIT_SKILL_ID,
+        name="愿力冲击",
+        element=element,
+        category=category,
+        power=80,
+        energy_cost=0,
+        desc="应对状态：本次威力+150%",
+    )
+    wish.counter_target = "status"
+    return wish
+
+
+class _WishOnSuperEffective(TraitHandler):
+    """造成克制伤害后：攻防速+20%、回复2能量、首个技能替换为对应系别愿力冲击（永久）。"""
+
+    implemented = True
+    wish_element = None  # 子类指定系别
+
+    def on_attack(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        if ctx.extra.get("type_mult", 1.0) <= 1.0:
+            return
+        # 攻防速+20%（双攻双防各2层 + 速度2层）
+        B.grant_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.DEF, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPDEF, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPEED_PERCENT, 2, source_kind="trait")
+        T.grant_energy(ctx.state, ctx.actor, 2)
+        # 首个技能替换为对应系别愿力冲击（永久替换、不还原——不设 wish_original_skill）
+        if ctx.actor.skills:
+            ctx.actor.skills[0] = _wish_skill(ctx.actor, self.wish_element)
+        ctx.add_state("triggers", 1)
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("triggers", 0)
+        if n <= 0:
+            return None
+        return [
+            {"name": "双攻&双防", "layers": n, "per": "20%", "gain": True},
+            {"name": "速度", "layers": n, "per": "20%", "gain": True},
+        ]
+
+
+class Verdict(_WishOnSuperEffective):
+    trait_id = 280025
+    name = "裁决"
+    desc = "造成克制伤害后，获得攻防速+20%，回复2能量，首个技能替换为光系愿力冲击。"
+    wish_element = Element.LIGHT
+
+
+class Nourish(_WishOnSuperEffective):
+    trait_id = 280026
+    name = "滋养"
+    desc = "造成克制伤害后，获得攻防速+20%，回复2能量，首个技能替换为草系愿力冲击。"
+    wish_element = Element.GRASS
+
+
+class Ignite(_WishOnSuperEffective):
+    trait_id = 280027
+    name = "点燃"
+    desc = "造成克制伤害后，获得攻防速+20%，回复2能量，首个技能替换为火系愿力冲击。"
+    wish_element = Element.FIRE
+
+
+class Purify(_WishOnSuperEffective):
+    trait_id = 280028
+    name = "净化"
+    desc = "造成克制伤害后，获得攻防速+20%，回复2能量，首个技能替换为水系愿力冲击。"
+    wish_element = Element.WATER
+
+
 def register_kill() -> None:
     register(DevilsPrice())
     register(FeignDeath())
     register(Undying())
     register(Hurricane())
     register(DemonFeast())
+    for cls in (Verdict, Nourish, Ignite, Purify):
+        register(cls())
 
 
 register_kill()

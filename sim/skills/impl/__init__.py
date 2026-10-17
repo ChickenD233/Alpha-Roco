@@ -34,3 +34,4 @@ from __future__ import annotations
 from . import defense  # noqa: F401  防御类（category 2，52 条已完成减伤/应对类别）
 from . import attack  # noqa: F401  攻击类（category 0/1）
 from . import status  # noqa: F401  状态类（category 3）
+from . import wish  # noqa: F401  愿力冲击（特性替换版，skill_id=-2）

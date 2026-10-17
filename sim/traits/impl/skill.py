@@ -20,6 +20,9 @@
 - 200128 乘风连击   使用翼系技能后，获得连击数+1（HIT_COUNT_FLAT buff 叠加）。
 - 200129 快锤       携带的能耗小于3的技能获得迅捷（按真实能耗判断，入场时重算）。
 - 200234 翼轴       1号位技能获得迅捷和传动1（战斗开始时给 skills[0] 打标记）。
+- 200093 起飞加速   本场战斗首次使用的技能获得迅捷（on_skill_start 打标记）。
+- 200173 暴食       携带的龙系技能获得迅捷（on_battle_start 按属性打标记）。
+- 280029 相争       首次使用的技能获得迅捷；拥有迅捷效果的技能先手+1（modify_priority）。
 - 200300 上锁       对手本回合使用的技能，冷却1回合。
 - 200262 哨兵       敌方本回合技能足够击败自己时，速度+50，行动后脱离。
 - 280008 高浓生物碱  使用技能时（不限属性），敌方获得2层中毒。
@@ -47,6 +50,7 @@ FIRE = E.FIRE  # 2 火
 GRASS = E.GRASS  # 1 草
 POISON = E.POISON  # 9 毒
 WING = E.WING  # 12 翼
+DRAGON = E.DRAGON  # 7 龙
 DARK = E.DARK  # 15 恶
 ICE = E.ICE  # 6 冰
 POISON_MARK = 4  # 中毒印记
@@ -65,11 +69,11 @@ class BestCompanion(TraitHandler):
             return
         if ctx.extra.get("type_mult", 1.0) <= 1.0:
             return
-        B.add_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.SPATK, 2, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.DEF, 2, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.SPDEF, 2, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.SPEED_PERCENT, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.DEF, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPDEF, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPEED_PERCENT, 2, source_kind="trait")
         T.grant_energy(ctx.state, ctx.actor, 2)
         ctx.add_state("triggers", 1)
 
@@ -95,14 +99,14 @@ class Soak(TraitHandler):
             return
         if ctx.skill.element != WATER:
             return
-        B.add_buff(ctx.actor, B.BuffType.ENERGY_COST, -1, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ENERGY_COST, -1, source_kind="trait")
         ctx.add_state("uses", 1)
 
     def display(self, state, pet):
         n = pet.trait_state.get("uses", 0)
         if n <= 0:
             return None
-        return [{"name": "能耗", "layers": n, "per": "1", "gain": True}]
+        return [{"name": "能耗", "layers": n, "per": "1", "gain": False}]
 
 
 # ---------------- 200146 助燃 ----------------
@@ -117,8 +121,8 @@ class FireFuel(TraitHandler):
             return
         if ctx.skill.element != FIRE:
             return
-        B.add_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.SPATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPATK, 2, source_kind="trait")
         ctx.add_state("uses", 1)
 
     def display(self, state, pet):
@@ -141,10 +145,10 @@ class Detonation(TraitHandler):
         if ctx.skill.element != FIRE:
             return
         # 永久：PERMANENT 时长（下场不消失）
-        B.add_buff(
+        B.grant_buff(
             ctx.actor, B.BuffType.ATK, 3, B.DurationKind.PERMANENT, source_kind="trait"
         )
-        B.add_buff(
+        B.grant_buff(
             ctx.actor,
             B.BuffType.SPATK,
             3,
@@ -207,7 +211,7 @@ class Alkaloid(TraitHandler):
         target = ctx.target
         if target is None or target.side == ctx.actor.side:
             return
-        B.add_buff(
+        B.grant_buff(
             target,
             B.BuffType.POISON,
             2,
@@ -229,8 +233,8 @@ class DrumUp(TraitHandler):
             return
         if ctx.skill.energy_cost != 3:
             return
-        B.add_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
-        B.add_buff(ctx.actor, B.BuffType.DEF, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.ATK, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.DEF, 2, source_kind="trait")
         ctx.add_state("uses", 1)
 
     def display(self, state, pet):
@@ -267,7 +271,7 @@ class GreedyAlgorithm(TraitHandler):
         target = ctx.opponent()
         if target is None:
             return
-        B.add_buff(
+        B.grant_buff(
             target,
             B.BuffType.BURN,
             6,
@@ -313,7 +317,7 @@ class KaKaDash(TraitHandler):
             return
         if not ctx.is_first:
             return
-        B.add_buff(ctx.actor, B.BuffType.HIT_COUNT_FLAT, 1, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.HIT_COUNT_FLAT, 1, source_kind="trait")
         ctx.add_state("uses", 1)
 
     def on_skill_end(self, ctx):
@@ -350,7 +354,7 @@ class VenomGland(TraitHandler):
         target = ctx.target
         if target is None or target.side == ctx.actor.side:
             return
-        B.add_buff(
+        B.grant_buff(
             target,
             B.BuffType.POISON,
             4,
@@ -374,7 +378,7 @@ class SoulBurn(TraitHandler):
         if target is None or target.side == ctx.actor.side:
             return
         if ctx.skill.element == ICE:
-            B.add_buff(
+            B.grant_buff(
                 target,
                 B.BuffType.BURN,
                 4,
@@ -384,7 +388,7 @@ class SoulBurn(TraitHandler):
             )
             ctx.add_state("burns", 1)
         elif ctx.skill.element == FIRE:
-            B.add_buff(
+            B.grant_buff(
                 target,
                 B.BuffType.FREEZE,
                 2,
@@ -413,7 +417,7 @@ class DissolveSpread(TraitHandler):
         n_poison = sum(1 for s in ctx.actor.skills if s.element == POISON)
         if n_poison <= 0:
             return
-        B.add_buff(
+        B.grant_buff(
             target,
             B.BuffType.POISON,
             n_poison,
@@ -444,7 +448,7 @@ class SpreadErosion(TraitHandler):
         layers = stacks * 2
         if layers <= 0:
             return
-        B.add_buff(
+        B.grant_buff(
             target,
             B.BuffType.POISON,
             layers,
@@ -595,6 +599,94 @@ class WingAxis(TraitHandler):
             skill.drive = 1
 
 
+# ---------------- 200173 暴食 ----------------
+class Gluttony(TraitHandler):
+    trait_id = 200173
+    name = "暴食"
+    desc = "携带的龙系技能获得迅捷。"
+    implemented = True
+
+    def on_battle_start(self, ctx):
+        # 携带的龙系技能全部获得迅捷（标记跟着技能对象走；
+        # 巧变替换出的临时技能不是"携带的"，不带标记）
+        for skill in ctx.actor.skills:
+            if skill.element == DRAGON:
+                skill.swift = True
+
+
+# ---------------- 280022 溶解腐蚀 ----------------
+class DissolveCorrosion(TraitHandler):
+    trait_id = 280022
+    name = "溶解腐蚀"
+    desc = "每携带1个毒系技能进入战斗，水系技能使敌方获得2层中毒。"
+    implemented = True
+
+    def on_battle_start(self, ctx):
+        # 战斗开始时统计携带的毒系技能数（巧变临时技能不算"携带的"）
+        n = sum(1 for s in ctx.actor.skills if s.element == POISON)
+        ctx.set_state("poison_skills", n)
+
+    def on_skill_end(self, ctx):
+        # 使用水系技能（不限类别）时，敌方获得 2×N 层中毒（N=携带的毒系技能数）
+        if ctx.subject is not ctx.actor or ctx.skill is None:
+            return
+        if ctx.skill.element != WATER:
+            return
+        n = ctx.state_of("poison_skills", 0)
+        target = ctx.target
+        if n <= 0 or target is None or target.side == ctx.actor.side:
+            return
+        B.grant_buff(
+            target,
+            B.BuffType.POISON,
+            2 * n,
+            source_side=ctx.actor.side,
+            source_pet=ctx.actor.name,
+            source_kind="debuff",
+        )
+
+
+# ---------------- 200093 起飞加速 ----------------
+class TakeoffBoost(TraitHandler):
+    trait_id = 200093
+    name = "起飞加速"
+    desc = "本场战斗首次使用的技能获得迅捷。"
+    implemented = True
+
+    def on_skill_start(self, ctx):
+        # 首次使用（任何类别技能，含迅捷自动释放与蓄力首段）时给该技能打迅捷标记，
+        # 之后主动换人入场会自动释放它；聚能不是技能，不算使用。
+        if ctx.subject is not ctx.actor or ctx.skill is None:
+            return
+        if ctx.state_of("first_used", False):
+            return
+        ctx.set_state("first_used", True)
+        ctx.skill.swift = True
+
+
+# ---------------- 280029 相争 ----------------
+class Rivalry(TraitHandler):
+    trait_id = 280029
+    name = "相争"
+    desc = "本场战斗首次使用的技能获得迅捷。拥有迅捷效果的技能先手+1。"
+    implemented = True
+
+    def on_skill_start(self, ctx):
+        # 首次使用（任何类别技能）时给该技能打迅捷标记；与 200093 起飞加速同一逻辑
+        if ctx.subject is not ctx.actor or ctx.skill is None:
+            return
+        if ctx.state_of("first_used", False):
+            return
+        ctx.set_state("first_used", True)
+        ctx.skill.swift = True
+
+    def modify_priority(self, ctx):
+        # 拥有迅捷效果的技能先手+1（含本特性标记的、技能侧自带迅捷的）
+        if ctx.target is not ctx.actor or ctx.skill is None:
+            return 0
+        return 1 if skill_utils.is_swift(ctx.skill) else 0
+
+
 # ---------------- 200128 乘风连击 ----------------
 class WindRideCombo(TraitHandler):
     trait_id = 200128
@@ -607,7 +699,7 @@ class WindRideCombo(TraitHandler):
             return
         if ctx.skill.element != WING:
             return
-        B.add_buff(ctx.actor, B.BuffType.HIT_COUNT_FLAT, 1, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.HIT_COUNT_FLAT, 1, source_kind="trait")
         ctx.add_state("uses", 1)
 
     def display(self, state, pet):
@@ -630,7 +722,7 @@ class ConcentratedAlkaloid(TraitHandler):
         target = ctx.target
         if target is None or target.side == ctx.actor.side:
             return
-        B.add_buff(
+        B.grant_buff(
             target,
             B.BuffType.POISON,
             2,
@@ -681,6 +773,10 @@ def register_skill() -> None:
         QuickHammer,
         WindRideCombo,
         WingAxis,
+        TakeoffBoost,
+        Rivalry,
+        Gluttony,
+        DissolveCorrosion,
         ConcentratedAlkaloid,
     ):
         register(cls())

@@ -163,6 +163,9 @@ def check() -> list:
     for sid, handler in sorted(_REGISTRY.items()):
         raw = _RAW.get(sid)
         if raw is None:
+            # 负数 id 是运行时虚拟技能（愿力冲击等特性/共鸣替换用），不属于 skills.json
+            if sid < 0:
+                continue
             problems.append(f"{sid}: 注册表存在但 skills.json 中没有该技能")
             continue
         if handler.name and handler.name != raw["name"]:

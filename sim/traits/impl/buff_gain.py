@@ -43,7 +43,7 @@ class NutrientBubble(TraitHandler):
             return
         if not ctx.is_active():
             return
-        B.add_buff(ctx.actor, buff_type, 2, source_kind="trait")
+        B.grant_buff(ctx.actor, buff_type, 2, source_kind="trait")
         ctx.add_state("triggers", 1)
 
     def display(self, state, pet):
@@ -60,6 +60,9 @@ class Cheerleader(TraitHandler):
     desc = "若自己在萌化状态下再获得萌化会解除萌化。"
     implemented = True
 
+    def allow_cute_reapplication(self, pet):
+        return B.has_buff(pet, B.BuffType.CUTE)
+
     def on_buff_gain(self, ctx):
         if ctx.subject is not ctx.actor:
             return
@@ -68,18 +71,29 @@ class Cheerleader(TraitHandler):
         # 本次获得萌化前是否已处于萌化状态（pre_had 由施加方广播时携带）
         if not ctx.extra.get("pre_had"):
             return  # 第一次萌化，不解除
-        # 已有萌化 → 解除：evolve 恢复一阶 + 减少一层萌化 buff
-        if not evolve(ctx.actor):
-            return
-        cute_buffs = [b for b in ctx.actor.buffs if b.buff_type == B.BuffType.CUTE]
-        if cute_buffs:
-            b = cute_buffs[-1]
-            b.value -= 1
-            if b.value <= 0:
-                ctx.actor.buffs.remove(b)
+        # 第二次施加不再退化；恢复既有萌化造成的退化，并清除萌化状态。
+        layers = B.get_buff_value(ctx.actor, B.BuffType.CUTE)
+        added = ctx.extra.get("value", 0)
+        for _ in range(max(0, layers - added)):
+            if not evolve(ctx.actor):
+                break
+        B.remove_buff(ctx.actor, B.BuffType.CUTE)
 
 
 # ---------------- 注册 ----------------
+# ---------------- 200182 无忧无虑 ----------------
+class Carefree(TraitHandler):
+    trait_id = 200182
+    name = "无忧无虑"
+    desc = "可获得的萌化层数不受限制。"
+    implemented = True
+
+    def allow_cute_beyond_limit(self, pet):
+        # 退化到基础形态后仍可获得萌化 buff（层数叠加、形态不再退化）；
+        # 仍可退化时不受影响（走正常退化流程）
+        return True
+
+
 # ---------------- 200221 衡量 ----------------
 class Measure(TraitHandler):
     trait_id = 200221
@@ -112,13 +126,14 @@ class Measure(TraitHandler):
             return
         if not B.is_buff(buff_type, value):
             return
-        B.add_buff(ctx.actor, buff_type, value)
+        B.grant_buff(ctx.actor, buff_type, value)
 
 
 def register_buff_gain() -> None:
     register(NutrientBubble())
     register(Measure())
     register(Cheerleader())
+    register(Carefree())
 
 
 register_buff_gain()

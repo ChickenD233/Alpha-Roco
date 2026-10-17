@@ -49,7 +49,7 @@ class FrameUp(TraitHandler):
         new_count = lost // threshold
         old_count = ctx.state_of("count", 0)
         for _ in range(new_count - old_count):
-            B.add_buff(ctx.actor, B.BuffType.HIT_COUNT_FLAT, 2, source_kind="trait")
+            B.grant_buff(ctx.actor, B.BuffType.HIT_COUNT_FLAT, 2, source_kind="trait")
         ctx.set_state("count", new_count)
 
 

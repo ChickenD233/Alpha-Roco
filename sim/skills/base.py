@@ -214,15 +214,15 @@ class SkillHandler:
         """本次技能属性改写（如"本技能系别和天气系别相同"）；None = 不改写。"""
         return None
 
-    # ================= 每回合巧变（借用/取念/复写类） =================
+    # ================= 每回合替换（借用/取念/复写） =================
 
-    # 每回合巧变类技能的标记：True = 在场时每回合重随、场下还原为本体。
-    turn_morph: bool = False
-    turn_morph_cost_delta: int = 0  # 每回合巧变临时技能的能耗修正（取念/复写为 -2）
+    # 与巧变（morph_pool / morph_origin）完全分离：在场时每回合末重抽，离场还原。
+    round_replace: bool = False
+    round_replace_cost_delta: int = 0  # 取念/复写为 -2
 
-    def turn_morph_pool(self, state: BattleState, pet: BattlePet, skill: BattleSkill) -> list:
-        """每回合随机变成其他技能的技能：回合末由引擎调用取随机池
-        （BattleSkill 模板列表）；空 = 本回合不变化。"""
+    def round_replace_pool(self, state: BattleState, pet: BattlePet,
+                           skill: BattleSkill) -> list:
+        """返回每回合替换的候选技能模板池；空 = 本回合不替换。"""
         return []
 
     # ================= 事件钩子 =================

@@ -51,6 +51,20 @@ def remove_mark(state, side: str, mark_id: int) -> None:
             state.marks[side][side_name] = None
 
 
+def consume_mark_stacks(state, side: str, mark_id: int, amount: int) -> None:
+    """消耗印记部分层数（守望星 200210"仅消耗一半"类）；耗尽则移除印记。"""
+    if amount <= 0:
+        return
+    side_name = mark_side(mark_id)
+    current = state.marks[side][side_name]
+    if current is None or current["id"] != mark_id:
+        return
+    if amount >= current["stacks"]:
+        state.marks[side][side_name] = None
+        return
+    current["stacks"] -= amount
+
+
 def clear_side(state, side: str, side_name: str) -> None:
     state.marks[side][side_name] = None
 

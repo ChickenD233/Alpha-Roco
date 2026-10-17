@@ -112,6 +112,25 @@ class ThornTouch(TraitHandler):
         M.add_mark(ctx.state, attacker.side, 1, 1)
 
 
+# ---------------- 200324 乌龟塔理论 ----------------
+class TurtleTowerTheory(TraitHandler):
+    trait_id = 200324
+    name = "乌龟塔理论"
+    desc = "每受到1次攻击伤害，敌方获得3层星陨印记。"
+    implemented = True
+
+    def on_take_damage(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        # 仅技能攻击（category 0/1），不含异常状态伤害（dot 不走 take_damage）
+        if ctx.skill is None or ctx.skill.category not in (0, 1):
+            return
+        attacker = ctx.target
+        if attacker is None or attacker.side == ctx.actor.side:
+            return
+        M.add_mark(ctx.state, attacker.side, 7, 3)
+
+
 # ---------------- 200127 展翅 ----------------
 class SpreadWings(TraitHandler):
     trait_id = 200127
@@ -201,6 +220,7 @@ def register_batch1_taken() -> None:
         Polarization,
         ThornSkin,
         ThornTouch,
+        TurtleTowerTheory,
         SpreadWings,
         Frighten,
         SoulChaser,

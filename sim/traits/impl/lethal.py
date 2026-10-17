@@ -36,7 +36,7 @@ class Phoenix(TraitHandler):
             return False
 
         ctx.actor.hp = 1
-        B.add_buff(
+        B.grant_buff(
             attacker,
             B.BuffType.BURN,
             15,
@@ -65,7 +65,9 @@ class Cocoon(TraitHandler):
             return False
         ctx.add_state("triggers", 1)
         had_cute = any(b.buff_type == B.BuffType.CUTE for b in ctx.actor.buffs)
-        B.add_buff(ctx.actor, B.BuffType.CUTE, 1, source_kind="debuff")
+        gained = B.grant_buff(ctx.actor, B.BuffType.CUTE, 1, source_kind="debuff")
+        if gained == 0:
+            return False
         # 广播 buff_gain（CUTE）：供"再获得萌化"响应类特性（如拉拉队长 200288）使用。
         # pre_had=本次获得萌化前是否已处于萌化状态
         from ... import traits as T

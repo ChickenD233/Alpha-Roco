@@ -28,6 +28,7 @@ from ..base import TraitHandler
 
 WATER = E.WATER  # 3 水
 EARTH = E.EARTH  # 5 地
+FANTASY = E.FANTASY  # 17 幻
 NO_LIMIT = 999  # 多人宿舍：能量上限视为无实际限制
 
 
@@ -164,7 +165,7 @@ class Migration(TraitHandler):
         if ctx.subject is not ctx.actor:
             return
         # 永久：PERMANENT 时长（下场不消失），每次进入蓄力叠加一层
-        B.add_buff(
+        B.grant_buff(
             ctx.actor,
             B.BuffType.ENERGY_COST,
             -2,
@@ -177,7 +178,7 @@ class Migration(TraitHandler):
         n = pet.trait_state.get("windups", 0)
         if n <= 0:
             return None
-        return [{"name": "能耗", "layers": n, "per": "2", "gain": True}]
+        return [{"name": "能耗", "layers": n, "per": "2", "gain": False}]
 
 
 # ---------------- 200224 消波块 ----------------
@@ -251,6 +252,21 @@ class GrandFeast(TraitHandler):
         return 0.0
 
 
+# ---------------- 200188 盲从 ----------------
+class BlindObedience(TraitHandler):
+    trait_id = 200188
+    name = "盲从"
+    desc = "可以携带多个复写/借用/取念技能，非幻系技能能耗-2。"
+    implemented = True
+
+    def modify_energy_cost(self, ctx):
+        if not _self(ctx) or ctx.skill is None:
+            return 0
+        if ctx.skill.element == FANTASY:
+            return 0
+        return -2
+
+
 def register_batch1_energy() -> None:
     for cls in (
         ShrinkShell,
@@ -264,6 +280,7 @@ def register_batch1_energy() -> None:
         SharedDorm,
         StoneFeast,
         GrandFeast,
+        BlindObedience,
     ):
         register(cls())
 

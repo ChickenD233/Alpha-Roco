@@ -1,0 +1,24 @@
+{
+    "resonace": 1,
+    "team": [
+        {
+            "spirit": "迪莫",
+            "nature": 23,
+            "ivs": {
+                "hp": 0,
+                "atk": 10,
+                "def": 10,
+                "spatk": 0,
+                "spdef": 0,
+                "speed": 10
+            },
+            "bloodline": 4,
+            "skills": [
+                "防御",
+                "光球",
+                "猛烈撞击",
+                "棘突"
+            ]
+        }
+    ]
+}

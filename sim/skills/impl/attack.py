@@ -4,7 +4,7 @@
 威力/属性/能耗沿用 skills.json 的数据；只有"由规则算出"的威力才用
 ``absolute_power`` 覆盖（见 README 第 1 节列出的 4 条桩值技能）。
 
-进度以 ``data/skills.json`` 的 ``done``/``tested`` 标志为准（与 traits 同约定）。
+进度以 ``data/skills.json`` 的 ``done``/``tested`` 标志为准。
 
 排列规则（新增技能请照此插入，保持文件可扫读）：
 1. 家族（参数化声明器 + 登记表）在前：纯攻击基族置首，其余按族内最小技能 id 升序；
@@ -81,44 +81,139 @@ class PureAttack(OpsSkill):
 
 for _handler in (
     # 无连击 · 物攻
+    PureAttack(7020370, "猛烈撞击", 0),
+    PureAttack(7020380, "飞踢", 0),
+    PureAttack(7020390, "扫尾", 0),
+    PureAttack(7020870, "落星", 0),
     PureAttack(7020930, "压扁", 0),
+    PureAttack(7020940, "践踏", 0),
+    PureAttack(7030170, "荆棘爪", 0),
     PureAttack(7030180, "仙人掌刺击", 0),
+    PureAttack(7030410, "飞叶", 0),
+    PureAttack(7030470, "顶端优势", 0),
     PureAttack(7040150, "火焰冲锋", 0),
     PureAttack(7040320, "火云车", 0),
+    PureAttack(7040370, "火焰箭", 0),
     PureAttack(7040390, "火焰切割", 0),
+    PureAttack(7040410, "炎息", 0),
+    PureAttack(7040420, "灼伤", 0),
+    PureAttack(7050330, "泡沫", 0),
+    PureAttack(7050360, "潮涌", 0),
     PureAttack(7050370, "水幕冲击", 0),
+    PureAttack(7060100, "闪光冲击", 0),
+    PureAttack(7060180, "光刃", 0),
+    PureAttack(7060210, "折线冲击", 0),
     PureAttack(7060230, "透射", 0),
+    PureAttack(7070100, "拆卸", 0),
+    PureAttack(7080110, "扬沙", 0),
     PureAttack(7080120, "跺地", 0),
+    PureAttack(7080180, "地震", 0),
+    PureAttack(7080290, "落石", 0),
+    PureAttack(7090230, "冰锥", 0),
+    PureAttack(7090250, "冰爪", 0),
+    PureAttack(7100120, "龙吼", 0),
+    PureAttack(7100190, "龙爪", 0),
+    PureAttack(7100220, "龙炮", 0),
     PureAttack(7100230, "隼鳞", 0),
+    PureAttack(7110010, "导电撞击", 0),
+    PureAttack(7110300, "球状闪电", 0),
+    PureAttack(7110320, "离子火花", 0),
+    PureAttack(7110330, "交叉闪电", 0),
+    PureAttack(7120190, "溃烂触碰", 0),
+    PureAttack(7120200, "毒沼", 0),
+    PureAttack(7120260, "毒誓", 0),
+    PureAttack(7130240, "蛰针", 0),
+    PureAttack(7130260, "噬心", 0),
+    PureAttack(7130270, "尾后针", 0),
+    PureAttack(7140250, "影袭", 0),
     PureAttack(7140260, "一拳", 0),
+    PureAttack(7150190, "鹰爪", 0),
+    PureAttack(7150210, "风矢", 0),
     PureAttack(7150240, "俯冲猛击", 0),
+    PureAttack(7160220, "鞭打", 0),
+    PureAttack(7160240, "碰爪", 0),
     PureAttack(7160260, "爆米花爆破", 0),
+    PureAttack(7170190, "诡刺", 0),
+    PureAttack(7170200, "幻象", 0),
+    PureAttack(7170290, "撞鬼", 0),
+    PureAttack(7180080, "恶能量", 0),
+    PureAttack(7180240, "迫害", 0),
     PureAttack(7180270, "诋毁", 0),
     PureAttack(7190210, "念力膨胀", 0),
+    PureAttack(7190350, "粒子对撞", 0),
+    PureAttack(7190360, "星云漩涡", 0),
+    PureAttack(7190370, "双星", 0),
     # 无连击 · 魔攻
+    PureAttack(7020410, "音爆", 1),
+    PureAttack(7020880, "拍击", 1),
+    PureAttack(7020890, "音波弹", 1),
+    PureAttack(7020900, "许愿星", 1),
+    PureAttack(7020910, "星星撞击", 1),
     PureAttack(7020950, "湮灭", 1),
+    PureAttack(7020960, "打鼾", 1),
+    PureAttack(7030430, "花香", 1),
     PureAttack(7030440, "棘突", 1),
     PureAttack(7030460, "叶绿光束", 1),
     PureAttack(7040160, "炎枪", 1),
+    PureAttack(7040330, "爆裂飞弹", 1),
+    PureAttack(7040340, "热气", 1),
+    PureAttack(7040360, "火爪", 1),
+    PureAttack(7050170, "水弹枪", 1),
     PureAttack(7050180, "气泡", 1),
     PureAttack(7050290, "水光冲击", 1),
+    PureAttack(7050320, "水弹", 1),
+    PureAttack(7050340, "肥皂泡", 1),
+    PureAttack(7050380, "激流", 1),
+    PureAttack(7060090, "闪光", 1),
+    PureAttack(7060160, "光球", 1),
+    PureAttack(7060190, "脉冲光线", 1),
     PureAttack(7060200, "虹光冲击", 1),
     PureAttack(7070130, "金属噪音", 1),
+    PureAttack(7070330, "广播", 1),
+    PureAttack(7080270, "泥浆", 1),
+    PureAttack(7080280, "泥巴喷射", 1),
     PureAttack(7080300, "热砂", 1),
     PureAttack(7080310, "陨石", 1),
+    PureAttack(7090240, "冷风", 1),
+    PureAttack(7100210, "角击", 1),
+    PureAttack(7110190, "触电", 1),
+    PureAttack(7110290, "电流", 1),
+    PureAttack(7110310, "磁干扰", 1),
+    PureAttack(7120180, "毒泡泡", 1),
     PureAttack(7120210, "瘴气喷射", 1),
+    PureAttack(7130280, "虫蛊", 1),
+    PureAttack(7140210, "气波", 1),
+    PureAttack(7140240, "贯手", 1),
+    PureAttack(7150180, "鸣叫", 1),
     PureAttack(7150220, "回旋风暴", 1),
+    PureAttack(7160130, "飞吻", 1),
+    PureAttack(7160230, "魅惑", 1),
+    PureAttack(7160350, "可爱", 1),
     PureAttack(7170160, "恐吓", 1),
     PureAttack(7170170, "幽灵爆发", 1),
     PureAttack(7170220, "灵媒", 1),
+    PureAttack(7180250, "掠夺", 1),
+    PureAttack(7180280, "栽赃", 1),
+    PureAttack(7180460, "暴打", 1),
     PureAttack(7190390, "大爆炸", 1),
     # 连击 · 物攻
-    PureAttack(7080290, "落石", 0, hits=1),
+    PureAttack(7020480, "旋转突击", 0, hits=3),
+    PureAttack(7030190, "刺藤", 0, hits=2),
+    PureAttack(7030420, "种皮爆裂", 0, hits=2),
+    PureAttack(7040190, "双响炮", 0, hits=2),
+    PureAttack(7060170, "光之矛", 0, hits=3),
+    PureAttack(7140230, "缠丝劲", 0, hits=2),
+    PureAttack(7150050, "啄击", 0, hits=2),
     # 连击 · 魔攻
     PureAttack(7020500, "乱打", 1, hits=5),
-    PureAttack(7020890, "音波弹", 1, hits=1),
+    PureAttack(7020920, "能量炮", 1, hits=2),
     PureAttack(7040350, "流火", 1, hits=3),
     PureAttack(7050350, "水花四溅", 1, hits=4),
+    PureAttack(7090260, "打雪仗", 1, hits=2),
+    PureAttack(7130250, "虫刺", 1, hits=3),
+    PureAttack(7170210, "午夜噪音", 1, hits=5),
+    PureAttack(7180260, "黑手", 1, hits=2),
+    PureAttack(7190380, "针状物", 1, hits=3),
 ):
     register(_handler)
 
@@ -590,7 +685,9 @@ class CuteAttack(OpsSkill):
 
     def modify_power(self, ctx):
         percent, flat = super().modify_power(ctx)
-        if self.power_on_cute and can_cute(ctx.actor):
+        if self.power_on_cute and buffs.can_gain_buff(
+            ctx.actor, buffs.BuffType.CUTE, 1
+        ):
             flat += self.power_on_cute
         return (percent, flat)
 
@@ -626,7 +723,7 @@ for _handler in (
 class PiercingShot(OpsSkill):
     """造成物伤；若敌方能量不高于 2，本次技能威力变为 5 倍。
 
-    普通系（element 0）物攻，威力 65、能耗 2 取自 skills.json。能量条件在
+    普通系（element 0）物攻，威力 65、能耗 2。能量条件在
     **使用技能时**实时读取（伤害计算时），选择技能时的能量不作数；
     "5 倍"按增量语义折算为 +400%（P11）。
     """
@@ -650,7 +747,7 @@ register(PiercingShot())
 class Preemptive(OpsSkill):
     """造成物理伤害，先手+1。
 
-    普通系（element 0）物攻，威力 55、能耗 2 取自 skills.json。先手+1 是
+    普通系（element 0）物攻，威力 55、能耗 2。先手+1 是
     技能侧静态增量（priority_delta），参与行动排序：应对强制先手之下、
     有效速度之上（B10）——先手值高者先动，相等才比速度。
     """
@@ -669,7 +766,7 @@ register(Preemptive())
 class Whirlwind(OpsSkill):
     """造成物理伤害，先手+1，迸发：本次技能威力+30。
 
-    普通系（element 0）物攻，威力 60、能耗 3 取自 skills.json。
+    普通系（element 0）物攻，威力 60、能耗 3。
     先手+1 = 技能侧静态增量（priority_delta，同先发制人）。
     迸发 = 入场后首次行动生效：ctx.actor.has_acted_since_entry 为 False 时
     威力 +30（modify_power 固定值增量，攻击伤害与显示威力同计入；
@@ -696,7 +793,7 @@ register(Whirlwind())
 class AfterStrike(OpsSkill):
     """造成物理伤害，先手-1。
 
-    普通系（element 0）物攻，威力 155、能耗 3 取自 skills.json。先手-1 是
+    普通系（element 0）物攻，威力 155、能耗 3。先手-1 是
     技能侧静态增量（priority_delta），参与行动排序：应对强制先手之下、
     有效速度之上（B10）——先手值低者后动，相等才比速度（先发制人的镜像）。
     """
@@ -715,7 +812,7 @@ register(AfterStrike())
 class SieveSurge(OpsSkill):
     """造成物伤，自己生命大于80%时，本次技能威力+75。
 
-    草系（element 1）物攻，威力 80、能耗 3 取自 skills.json。"大于80%"按
+    草系（element 1）物攻，威力 80、能耗 3。"大于80%"按
     整数比较（hp×5 > max_hp×4，恰好 80% 不加）；威力加成走 modify_power
     固定值增量，攻击伤害与显示威力同计入。
     """
@@ -739,7 +836,7 @@ register(SieveSurge())
 class FireBreath(OpsSkill):
     """造成物伤，每次使用后，本技能威力永久+20。
 
-    火系（element 2）物攻，威力 50、能耗 1 取自 skills.json。威力成长经
+    火系（element 2）物攻，威力 50、能耗 1。威力成长经
     SkillGrowth(GROWTH_POWER, +20) 写入 skill_state（与水炮能耗成长同一管线），
     威力查询/伤害/显示同走 query_power，与威力 buff/特性增量叠加。
     """
@@ -758,7 +855,7 @@ register(FireBreath())
 class GearTorque(OpsSkill):
     """造成物伤，每回合位置发生变化时，本技能威力永久+15。
 
-    机械系（element 16）物攻，威力 70、能耗 3 取自 skills.json。位置变化由引擎
+    机械系（element 16）物攻，威力 70、能耗 3。位置变化由引擎
     在传动重排后广播（STAGE_SLOT_CHANGE，覆盖开局排序 / 回合末重排 / 换人后的
     重排，只结算在场精灵）；每次变化经 SkillGrowth(GROWTH_POWER, +15) 永久成长，
     与威力 buff/特性增量叠加。
@@ -852,7 +949,7 @@ class SingingSand(OpsSkill):
 
     地系（element 5）物攻，威力 60 是桩值（物防差 ≤0 时的威力，S17）：实际
     威力按双方**有效**物防差查表（与闪击同表），经 absolute_power 绝对覆盖。
-    能耗 4 取自 skills.json。
+    能耗 4。
     """
 
     skill_id = 7080320
@@ -876,7 +973,7 @@ register(SingingSand())
 class Blizzard(OpsSkill):
     """造成物伤，敌方获得1层冻结。
 
-    冰系（element 6）物攻，威力 85、能耗 3 取自 skills.json。命中后
+    冰系（element 6）物攻，威力 85、能耗 3。命中后
     （STAGE_HIT）敌方获得 1 层冻结（含未造成伤害的情形，S9；一次施加
     一个事件，"获得冻结时追加"类特性响应一次）。
     """
@@ -896,7 +993,7 @@ register(Blizzard())
 class Hail(OpsSkill):
     """造成物伤，应对状态：额外使敌方获得全技能能耗+3。
 
-    冰系（element 6）物攻，威力 105、能耗 4 取自 skills.json。应对状态 =
+    冰系（element 6）物攻，威力 105、能耗 4。应对状态 =
     counter_target 为 status：只有对方本回合使用状态行动时才算应对成功，
     此时由引擎在 STAGE_COUNTER（回合末，B38）结算本条附加效果。
     "全技能能耗+3"是敌方全技能能耗修正（ENERGY_COST 正值 = 减益），
@@ -921,7 +1018,7 @@ register(Hail())
 class DragonClaw(OpsSkill):
     """蓄力，造成物伤并吸血50%。
 
-    龙系（element 7）物攻，威力 130、能耗 3 取自 skills.json。蓄力是静态属性
+    龙系（element 7）物攻，威力 130、能耗 3。蓄力是静态属性
     （windup=True，同升龙咆哮）：首回合选择时支付能耗进入蓄力，次回合再次选择
     该技能时释放。吸血 50% 走技能侧吸血修正查询（skills.query_lifesteal），
     经引擎伤害结算的吸血管线生效（与 buff/特性吸血叠加）。
@@ -936,6 +1033,33 @@ class DragonClaw(OpsSkill):
 
 
 register(DragonClaw())
+
+
+# 7140130 截拳
+class InterceptFist(OpsSkill):
+    """造成物伤；应对状态：造成打断，回复被打断技能能耗的能量。
+
+    武系（element 11）物攻，威力 85、能耗 3。打断是静态属性
+    （counter_interrupt，SPEC B40）：应对判定成功时对方的技能/聚能行动立即作废；
+    "回复被打断技能能耗的能量"是应对奖励从句，按 B38 回合末结算——取被应对技能
+    当前能耗回复自己（能量上限修正与能量广播同 GainEnergy 管线）。
+    """
+
+    skill_id = 7140130
+    name = "截拳"
+    category = 0
+    counter_target = COUNTER_STATUS
+    counter_interrupt = True
+    implemented = True
+
+    def on_counter(self, ctx):
+        incoming = ctx.extra.get("incoming_skill")
+        if incoming is None:
+            return
+        GainEnergy(value=int(incoming.energy_cost or 0)).apply(ctx)
+
+
+register(InterceptFist())
 
 
 class FlashStrike(OpsSkill):
@@ -968,7 +1092,7 @@ register(FlashStrike())
 class ScareBox(OpsSkill):
     """造成物伤；应对状态：使敌方失去 6 能量。
 
-    幽灵系（element 14）物攻，威力 80、能耗 3 取自 skills.json。应对奖励从句
+    幽灵系（element 14）物攻，威力 80、能耗 3。应对奖励从句
     延迟到回合末结算（B38），因此对方本回合的行动不受扣能影响——不会把对方的
     行动"吸"到无法支付。
     """
@@ -989,7 +1113,7 @@ register(ScareBox())
 class GraveyardBrawl(OpsSkill):
     """造成物伤；敌方每有 1 能量，本次技能威力 -10%。
 
-    幽灵系（element 14）物攻，威力 180、能耗 4 取自 skills.json。能量在
+    幽灵系（element 14）物攻，威力 180、能耗 4。能量在
     **使用技能时**实时读取（伤害计算时），按敌方当前能量逐点 -10%。
     """
 
@@ -1012,7 +1136,7 @@ register(GraveyardBrawl())
 class LimitTear(OpsSkill):
     """造成物伤；若自己生命高于 50%，使用后自己获得双攻 -50%。
 
-    恶系（element 15）物攻，威力 135、能耗 4 取自 skills.json。生命条件在
+    恶系（element 15）物攻，威力 135、能耗 4。生命条件在
     **使用技能时**实时判定；满足时使用后给自己物攻/魔攻各 -5 层（属性 10%/层
     = -50%），常规时长、离场清除。
     """
@@ -1036,7 +1160,7 @@ register(LimitTear())
 class CorneredBeast(OpsSkill):
     """造成物伤；若自己生命低于 50%，本次攻击吸血 50%。
 
-    恶系（element 15）物攻，威力 90、能耗 3 取自 skills.json。生命条件在
+    恶系（element 15）物攻，威力 90、能耗 3。生命条件在
     **使用技能时**实时判定（吸血比例查询），由引擎按本次实际伤害结算吸血。
     """
 
@@ -1059,7 +1183,7 @@ register(CorneredBeast())
 class BetWager(OpsSkill):
     """造成物伤；选择：本次威力 +40 且使用后自己生命 -10%，或生命低于 50% 时本次威力 +100%。
 
-    恶系（element 15）物攻，威力 85、能耗 3 取自 skills.json。
+    恶系（element 15）物攻，威力 85、能耗 3。
     明支路：本次威力固定 +40，使用后自己失去 10% 最大生命（代价类，与
     "彗星消耗全部生命"同一 LoseHp 管线）。
     暗支路：生命低于 50% 时本次威力 +100%；**使用技能时**实时判定，条件
@@ -1095,7 +1219,7 @@ register(BetWager())
 class Pursuit(OpsSkill):
     """造成魔伤，1连击，应对状态：本技能变为3连击。
 
-    普通系（element 0）魔攻，威力 75、能耗 3 取自 skills.json。基础 1 连击；
+    普通系（element 0）魔攻，威力 75、能耗 3。基础 1 连击；
     应对状态（对方本回合使用状态行动）成功时，本次连击数**变为 3**（强制值
     覆盖 buff/技能增量，与特性强制值取较大者）。与"应对状态：本次威力N倍"
     同属 B38 延迟结算的例外——连击数在伤害计算时就需要，故经 modify_hit_count
@@ -1122,7 +1246,7 @@ register(Pursuit())
 class ChargedBlast(OpsSkill):
     """造成魔伤，每使用1次其他普通系技能，本技能能耗永久-2。
 
-    普通系（element 0）魔攻，威力 120、能耗 6 取自 skills.json。能耗修正按
+    普通系（element 0）魔攻，威力 120、能耗 6。能耗修正按
     使用记录（BattlePet.used_skill_counts）中**其他**普通系技能的使用次数
     逐次 -2——动态计算与"永久"等价：记录只增不减、整场保留，付费/校验/
     显示同步（true_energy_cost 管线，最后统一钳制到 0）。自身使用不计入。
@@ -1152,7 +1276,7 @@ register(ChargedBlast())
 class Comet(OpsSkill):
     """造成魔伤，每失去5%生命，本次技能威力-10，使用后消耗全部生命。
 
-    普通系（element 0）魔攻，威力 240、能耗 0 取自 skills.json。
+    普通系（element 0）魔攻，威力 240、能耗 0。
     威力减益按**自己**已失去生命的 5% 整数步进逐档 -10（per_missing_hp，
     与燃尽同一接口，目标为自己；满血不减）。
     "使用后消耗全部生命"：on_after_use 直接对自己扣血 9999（用户口径：
@@ -1249,7 +1373,7 @@ register(MagicMorphAttack())
 class SweetTrap(OpsSkill):
     """造成魔伤；自己每有 1 能量，本次技能威力 +10。
 
-    草系（element 1）魔攻，威力 50、能耗 4 取自 skills.json。能量在**使用技能时**
+    草系（element 1）魔攻，威力 50、能耗 4。能量在**使用技能时**
     实时读取（伤害计算时），按自身当前能量逐点 +10（描述无 % → 固定值增量）。
     """
 
@@ -1270,7 +1394,7 @@ register(SweetTrap())
 class FlowerScatter(OpsSkill):
     """造成魔伤；选择：生命高于 80% 时威力 +50，或应对状态时自己回复 35% 生命。
 
-    草系（element 1）魔攻，威力 95、能耗 4 取自 skills.json。
+    草系（element 1）魔攻，威力 95、能耗 4。
     明支路：威力固定 +50，条件是**使用技能时**的生命（伤害计算时实时判定）。
     暗支路：本技能应对状态成功时回复 35% 最大生命——应对判定属排序期快照，
     奖励从句走回合末结算（B38）；条件不成立时该支路无效果。
@@ -1301,7 +1425,7 @@ register(FlowerScatter())
 class SustainedHeat(OpsSkill):
     """造成魔伤，应对状态：下次攻击技能威力翻倍。
 
-    火系（element 2）魔攻，威力 70、能耗 2 取自 skills.json。应对从句延迟到
+    火系（element 2）魔攻，威力 70、能耗 2。应对从句延迟到
     回合末结算（B38），故"下次攻击技能"必然指之后的回合。
 
     "威力翻倍"按 P11 增量语义折算成 +100%（与 CounterPowerUp 的"变为N倍"=
@@ -1335,7 +1459,7 @@ register(SustainedHeat())
 class BurnOut(OpsSkill):
     """造成魔伤，敌方每失去5%生命，本次技能威力-5。
 
-    火系（element 2）魔攻，威力 155、能耗 4 取自 skills.json。威力按敌方在场
+    火系（element 2）魔攻，威力 155、能耗 4。威力按敌方在场
     精灵已失去生命的 5% 整数步进逐档 -5（固定值增量，满血不减），走引擎的
     技能威力修正查询（query_power，与碎冰冰同一接口），显示威力同步计入。
     """
@@ -1357,10 +1481,10 @@ register(BurnOut())
 class HydroPulse(OpsSkill):
     """造成魔伤，回合结束时，本技能威力永久+20。
 
-    水系（element 3）魔攻，威力 90、能耗 6 取自 skills.json。
+    水系（element 3）魔攻，威力 90、能耗 6。
     触发条件（用户口径）：在场上**无条件**成长、回合末结算——不要求本回合
     使用过；场下不成长（引擎只对在场精灵发射 STAGE_ROUND_END，与
-    "每回合巧变只在场上"同一口径）。成长经 SkillGrowth(GROWTH_POWER, +20)
+    "每回合替换只对在场精灵抽取"同一口径）。成长经 SkillGrowth(GROWTH_POWER, +20)
     写入 skill_state，威力查询/伤害/显示同走 query_power。
     """
 
@@ -1379,7 +1503,7 @@ register(HydroPulse())
 class Refraction(OpsSkill):
     """造成魔伤，携带其他系别技能会给本技能带来不同效果。
 
-    光系（element 4）魔攻，威力 50、能耗 4 取自 skills.json。每个**其他**携带
+    光系（element 4）魔攻，威力 50、能耗 4。每个**其他**携带
     技能按其系别各贡献一次效果（同系别多个技能重复计入）：全部在命中后登记、
     回合末统一结算（B39，紧随应对奖励之后；本次伤害按携带效果生效前的状态
     结算——威力/连击类是给后续的 buff）。效果表见 _ON_HIT（策划口径）。
@@ -1454,7 +1578,7 @@ register(Refraction())
 class SkyLight(OpsSkill):
     """造成魔伤；本技能系别和天气系别相同。
 
-    光系（element 4）魔攻，威力 95、能耗 3 取自 skills.json。使用时按当前天气改写
+    光系（element 4）魔攻，威力 95、能耗 3。使用时按当前天气改写
     本技能系别（雨天=水系、暴风雪=冰系、沙暴=地系、雷鸣=电系）：STAB 与属性克制
     都按改写后的系别结算；无天气时不改写，保持光系。
     """
@@ -1475,7 +1599,7 @@ register(SkyLight())
 class ColdWind(OpsSkill):
     """造成魔伤，敌方获得魔防-50%。
 
-    冰系（element 6）魔攻，威力 70、能耗 3 取自 skills.json。命中附加效果在
+    冰系（element 6）魔攻，威力 70、能耗 3。命中附加效果在
     STAGE_HIT 登记、回合末统一结算（B39，同寒潮/瘴气喷射），结算时按在场状态
     解析对象。魔防-50% = 5 层（属性增益 10%/层，与贮藏/魔攻+70% 同一换算）。
     """
@@ -1485,9 +1609,7 @@ class ColdWind(OpsSkill):
     category = 1
     implemented = True
 
-    hit_effects = (
-        ApplyBuff(buff_type=buffs.BuffType.SPDEF, value=-5, target=ENEMY),
-    )
+    hit_effects = (ApplyBuff(buff_type=buffs.BuffType.SPDEF, value=-5, target=ENEMY),)
 
 
 register(ColdWind())
@@ -1497,7 +1619,7 @@ register(ColdWind())
 class IceShard(OpsSkill):
     """造成魔伤，敌方每有1层冻结，本次技能威力+20。
 
-    冰系（element 6）魔攻，威力 40、能耗 3 取自 skills.json。威力加成按敌方
+    冰系（element 6）魔攻，威力 40、能耗 3。威力加成按敌方
     在场精灵的冻结层数逐层 +20（固定值增量），走引擎的技能威力修正查询
     （skills.query_power，与特性同一增量语义），显示威力同步计入。
     """
@@ -1597,7 +1719,7 @@ register(SilkenThorn())
 class PseudoParasite(OpsSkill):
     """造成魔伤，偷取敌方1层印记。
 
-    虫系（element 10）魔攻，威力 80、能耗 3 取自 skills.json。偷取 =
+    虫系（element 10）魔攻，威力 80、能耗 3。偷取 =
     DispelMarks(count=1, steal=True)：敌方阵营正/负印记各被取走 1 层
     转给己方阵营（同 id 印记、同层数）；命中登记、回合末结算（B39）。
     """
@@ -1617,7 +1739,7 @@ register(PseudoParasite())
 class AmbushFromBehind(OpsSkill):
     """造成魔伤；若敌方能量等于 0，本次技能威力变为 20 倍。
 
-    幽灵系（element 14）魔攻，威力 40、能耗 2 取自 skills.json。能量条件在
+    幽灵系（element 14）魔攻，威力 40、能耗 2。能量条件在
     **使用技能时**实时读取（伤害计算时），选择技能时的能量不作数；
     "20 倍"按增量语义折算为 +1900%（P11）。
     """
@@ -1641,7 +1763,7 @@ register(AmbushFromBehind())
 class FourDimDegrade(OpsSkill):
     """造成魔伤，敌方每有1层印记，本技能能耗-1。
 
-    幻系（element 17）魔攻，威力 110、能耗 7 取自 skills.json。印记按**阵营**
+    幻系（element 17）魔攻，威力 110、能耗 7。印记按**阵营**
     计：敌方阵营正/负印记层数合计（不限种类），每层能耗 -1。能耗修正走
     引擎统一管线（skill_utils.true_energy_cost 的技能自身修正项），与
     buff/印记/天气/特性修正叠加后最后统一钳制到 0（B18）。
@@ -1663,7 +1785,7 @@ register(FourDimDegrade())
 class Confusion(OpsSkill):
     """造成魔伤，应对状态：敌方获得3层星陨印记。
 
-    幻系（element 17）魔攻，威力 65、能耗 2 取自 skills.json。
+    幻系（element 17）魔攻，威力 65、能耗 2。
     "应对状态"= counter_target 为 status：只有对方本回合使用状态行动时才算应对成功，
     此时由引擎在 STAGE_COUNTER 结算本条附加效果。
 
@@ -1690,7 +1812,7 @@ register(Confusion())
 class CounterPunch(OpsSkill):
     """造成物伤，2连击，若后手攻击，改为3连击。
 
-    武系（element 11）物攻，威力 25、能耗 2 取自 skills.json。固有 2 连击 =
+    武系（element 11）物攻，威力 25、能耗 2。固有 2 连击 =
     基础 1 + hit_count_flat 1；"后手"按本回合行动顺序判定（ctx.is_first，
     由排序期给出，连击数在伤害计算时即需确定）。"改为"按强制值覆盖
     （与追打"变为3连击"同口径）。
@@ -1716,7 +1838,7 @@ register(CounterPunch())
 class Bite(OpsSkill):
     """造成物伤，3连击，若自己的生命低于50%，本次技能连击数+2。
 
-    恶系（element 15）物攻，威力 20、能耗 3 取自 skills.json。固有 3 连击 =
+    恶系（element 15）物攻，威力 20、能耗 3。固有 3 连击 =
     基础 1 + hit_count_flat 2（与打喷嚏同管线）；自己生命**严格低于** 50%
     （整数比较 hp*2 < max_hp，避免浮点边界）时再 +2，合计 5 连击。
     连击数走统一汇总（compute_hit_count = 基础1 + 技能修正 + buff + 特性）。
@@ -1762,7 +1884,7 @@ register(MomentumStack())
 class SpiritLight(OpsSkill):
     """造成魔伤，3连击，若敌方本回合更换精灵，本次技能连击数翻倍。
 
-    幽系（element 14）魔攻，威力 25、能耗 3 取自 skills.json。固有 3 连击 =
+    幽系（element 14）魔攻，威力 25、能耗 3。固有 3 连击 =
     基础 1 + hit_count_flat 2。"翻倍"作用在**最终连击数**上（buff/特性/成长
     全部结算之后），故走 adjust_hit_count 钩子做乘算，而不是用 forced 覆盖
     ——覆盖会连带丢掉连击 buff/特性（暴风眼 +100%、特性 +1 等）。

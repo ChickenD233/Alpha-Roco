@@ -81,9 +81,46 @@ class Phylogeny(TraitHandler):
         return [{"name": "分配", "layers": n, "per": "1", "gain": True}]
 
 
+# ---------------- 280031 草木苏醒时 ----------------
+class FloraAwakening(TraitHandler):
+    trait_id = 280031
+    name = "草木苏醒时"
+    desc = "每回复1能量，物攻和魔攻永久+20%，攻击后重置。"
+    implemented = True
+
+    def on_energy_gain(self, ctx):
+        if ctx.subject is ctx.actor and ctx.energy_gain > 0:
+            ctx.add_state("restored_energy", ctx.energy_gain)
+
+    def modify_stat(self, ctx, stat):
+        if ctx.target is not ctx.actor or stat not in ("atk", "spatk"):
+            return 0.0
+        return 0.2 * ctx.state_of("restored_energy", 0)
+
+    def on_skill_start(self, ctx):
+        if (ctx.subject is ctx.actor and ctx.skill is not None
+                and ctx.skill.category in (0, 1)):
+            ctx.set_state("attack_energy_snapshot", ctx.state_of("restored_energy", 0))
+
+    def on_skill_end(self, ctx):
+        # 整次攻击用完旧加成；命中后回能产生的新加成留给下一次攻击。
+        if (ctx.subject is ctx.actor and ctx.skill is not None
+                and ctx.skill.category in (0, 1)):
+            consumed = ctx.state_of("attack_energy_snapshot", 0)
+            ctx.set_state("restored_energy", max(0, ctx.state_of("restored_energy", 0) - consumed))
+            ctx.set_state("attack_energy_snapshot", 0)
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("restored_energy", 0)
+        if n <= 0:
+            return None
+        return [{"name": "双攻", "layers": n, "per": "20%", "gain": True}]
+
+
 def register_resource() -> None:
     register(HumusCycle())
     register(Phylogeny())
+    register(FloraAwakening())
 
 
 register_resource()

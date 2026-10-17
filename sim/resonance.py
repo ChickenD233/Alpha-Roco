@@ -57,6 +57,12 @@ def _evolve(state, side: str, branch: int = 0) -> bool:
     if evolution.lordize(pet, branch):
         state.log.append(f"{side} {pet.name} 使用进化之力")
         traits.emit(state, "evolution", scope="self", side=side, subject=pet, pet=pet)
+        # 首领化视作一次入场：重置入场状态并广播入场事件——新形态的特性重新绑定后，
+        # 其"入场时"效果（如雪影冰灵 280012 抓到你了给敌方冻结）在双方行动前立即触发。
+        # 不是换人：不做印记/迸发结算，不触发迅捷。
+        pet.has_acted_since_entry = False
+        pet.entry_turn = state.turn
+        traits.emit(state, "entry", scope="all", side=side, subject=pet)
         return True
     state.log.append(f"{side} {pet.name} 无法首领化")
     return False

@@ -72,21 +72,28 @@ def on_round_end(state) -> None:
     if weather_id == BLIZZARD:
         # 暴风雪：双方当前出战精灵都获得1层冻结；按 state.round_end_order 顺序结算
         for side in order:
+            if state.active[side] < 0:
+                continue
             pet = state.teams[side][state.active[side]]
             if pet.hp > 0:
-                buffs.add_buff(
+                gained = buffs.grant_buff(
                     pet, buffs.BuffType.FREEZE, 1, buffs.DurationKind.PERMANENT
                 )
-                traits.on_buff_gain(state, pet, buffs.BuffType.FREEZE, 1)
+                if gained == 0:
+                    continue
+                traits.on_buff_gain(state, pet, buffs.BuffType.FREEZE, gained)
                 state.log.append(f"暴风雪：{pet.name} 获得1层冻结")
 
     if weather_id == THUNDERSTORM:
         # 雷鸣：双方每回合结束获得1层引电；电系精灵免疫；按 state.round_end_order 顺序结算
         for side in order:
+            if state.active[side] < 0:
+                continue
             pet = state.teams[side][state.active[side]]
             if pet.hp <= 0 or 8 in pet.attributes:
                 continue
-            buffs.add_buff(pet, buffs.BuffType.LIGHTNING, 1)
+            if not buffs.grant_buff(pet, buffs.BuffType.LIGHTNING, 1):
+                continue
             state.log.append(f"雷鸣：{pet.name} 获得1层引电")
 
     state.weather["remaining"] -= 1

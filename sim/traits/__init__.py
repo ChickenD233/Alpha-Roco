@@ -35,6 +35,8 @@ __all__ = [
     "query_power",
     "query_energy_cost",
     "query_speed",
+    "query_priority",
+    "query_star_consume",
     "query_damage_dealt",
     "query_damage_taken",
     "query_hit_count",
@@ -357,6 +359,33 @@ def query_speed(state: BattleState, pet: BattlePet, base: int = 0) -> int:
         ctx = _make_ctx(state, owner, "modify_speed", target=pet)
         total += handler.modify_speed(ctx)
     return total
+
+
+def query_priority(state: BattleState, pet: BattlePet, skill: BattleSkill | None,
+                   skill_index: int | None = None) -> int:
+    """行动先手值增量（"迅捷技能先手+1"类）；ctx.target=被查询精灵。"""
+    total = 0
+    for owner in _modifier_pets(state, pet):
+        handler = get_handler(owner.trait_id)
+        if handler is None:
+            continue
+        ctx = _make_ctx(state, owner, "modify_priority", target=pet,
+                        skill=skill, skill_index=skill_index)
+        total += handler.modify_priority(ctx)
+    return total
+
+
+def query_star_consume(state: BattleState, pet: BattlePet, stacks: int) -> int:
+    """星陨印记触发时应消耗的层数（默认全部消耗）；ctx.target=触发方（攻击方）。"""
+    for owner in _modifier_pets(state, pet):
+        handler = get_handler(owner.trait_id)
+        if handler is None:
+            continue
+        ctx = _make_ctx(state, owner, "modify_star_consume", target=pet)
+        r = handler.modify_star_consume(ctx, stacks)
+        if r is not None:
+            return r
+    return stacks
 
 
 def query_damage_dealt(

@@ -28,7 +28,7 @@
       "energyCost": 1,
       "power": 65,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -39,7 +39,7 @@
       "energyCost": 3,
       "power": 110,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -50,7 +50,7 @@
       "energyCost": 2,
       "power": 90,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -72,7 +72,7 @@
       "energyCost": 4,
       "power": 130,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -149,7 +149,7 @@
       "energyCost": 3,
       "power": 35,
       "desc": "造成物伤，3连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -534,7 +534,7 @@
       "energyCost": 0,
       "power": 45,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -545,7 +545,7 @@
       "energyCost": 1,
       "power": 65,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -567,7 +567,7 @@
       "energyCost": 3,
       "power": 110,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -578,7 +578,7 @@
       "energyCost": 2,
       "power": 90,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -589,7 +589,7 @@
       "energyCost": 3,
       "power": 50,
       "desc": "造成魔伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -611,7 +611,7 @@
       "energyCost": 4,
       "power": 130,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -633,7 +633,7 @@
       "energyCost": 6,
       "power": 165,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -941,7 +941,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -963,7 +963,7 @@
       "energyCost": 3,
       "power": 45,
       "desc": "造成物伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1128,7 +1128,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1139,7 +1139,7 @@
       "energyCost": 1,
       "power": 25,
       "desc": "造成物伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1150,7 +1150,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1194,7 +1194,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1381,7 +1381,7 @@
       "energyCost": 1,
       "power": 25,
       "desc": "造成物伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1524,7 +1524,7 @@
       "energyCost": 7,
       "power": 160,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1535,7 +1535,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1557,7 +1557,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1568,7 +1568,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1612,7 +1612,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1623,7 +1623,7 @@
       "energyCost": 4,
       "power": 120,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1788,7 +1788,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1942,7 +1942,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1953,7 +1953,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1964,7 +1964,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1986,7 +1986,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2008,7 +2008,7 @@
       "energyCost": 4,
       "power": 120,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2052,7 +2052,7 @@
       "energyCost": 4,
       "power": null,
       "desc": "减伤60%，应对攻击：自己获得1层湿润印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2096,7 +2096,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2107,7 +2107,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2162,7 +2162,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2173,7 +2173,7 @@
       "energyCost": 3,
       "power": 30,
       "desc": "造成物伤，3连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2184,7 +2184,7 @@
       "energyCost": 4,
       "power": 120,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2195,7 +2195,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2217,7 +2217,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2261,7 +2261,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "减伤90%，应对攻击：自己获得光系技能威力永久+50%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2382,7 +2382,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2591,7 +2591,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2668,7 +2668,7 @@
       "energyCost": 10,
       "power": 190,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2712,7 +2712,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "减伤70%，应对攻击：敌方获得物攻-70%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2756,7 +2756,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2767,7 +2767,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2888,7 +2888,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "减伤80%，应对攻击：敌方获得连击数-3。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3053,7 +3053,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "减伤80%，应对攻击：被应对技能能耗+3。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3075,7 +3075,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3086,7 +3086,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3097,7 +3097,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3108,7 +3108,7 @@
       "energyCost": 3,
       "power": 45,
       "desc": "造成魔伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3196,7 +3196,7 @@
       "energyCost": 3,
       "power": null,
       "desc": "减伤70%，应对攻击：敌方获得2层减速印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3317,7 +3317,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3394,7 +3394,7 @@
       "energyCost": 4,
       "power": 120,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3416,7 +3416,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3427,7 +3427,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3504,7 +3504,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3526,7 +3526,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3636,7 +3636,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3647,7 +3647,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3658,7 +3658,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3669,7 +3669,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3680,7 +3680,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3933,7 +3933,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3944,7 +3944,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3955,7 +3955,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4021,7 +4021,7 @@
       "energyCost": 4,
       "power": 120,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4219,7 +4219,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4230,7 +4230,7 @@
       "energyCost": 1,
       "power": 15,
       "desc": "造成魔伤，3连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4241,7 +4241,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4252,7 +4252,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4263,7 +4263,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4428,7 +4428,7 @@
       "energyCost": 3,
       "power": 85,
       "desc": "造成物伤，应对状态：造成打断，回复被打断技能能耗的能量。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4483,7 +4483,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "应对攻击：打断被应对技能，并造成90威力物伤。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4494,7 +4494,7 @@
       "energyCost": 4,
       "power": null,
       "desc": "减伤60%，应对攻击：对敌方造成武系物理伤害，威力与被应对技能相等。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4505,7 +4505,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4527,7 +4527,7 @@
       "energyCost": 1,
       "power": 25,
       "desc": "造成物伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4538,7 +4538,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4549,7 +4549,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4604,7 +4604,7 @@
       "energyCost": 3,
       "power": null,
       "desc": "减伤80%，应对攻击：自己获得全技能威力+40。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4648,7 +4648,7 @@
       "energyCost": 0,
       "power": 15,
       "desc": "造成物伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4758,7 +4758,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4769,7 +4769,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4791,7 +4791,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4868,7 +4868,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "减伤70%，应对攻击：自己获得连击数+2。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4945,7 +4945,7 @@
       "energyCost": 2,
       "power": 80,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5044,7 +5044,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5055,7 +5055,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5066,7 +5066,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5121,7 +5121,7 @@
       "energyCost": 4,
       "power": null,
       "desc": "减伤90%，应对攻击：敌方获得1层萌化。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5143,7 +5143,7 @@
       "energyCost": 4,
       "power": null,
       "desc": "减伤70%，应对攻击：自己获得1层萌芽印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5154,7 +5154,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5319,7 +5319,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5330,7 +5330,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5341,7 +5341,7 @@
       "energyCost": 4,
       "power": 20,
       "desc": "造成魔伤，5连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5396,7 +5396,7 @@
       "energyCost": 2,
       "power": null,
       "desc": "减伤80%，应对攻击：自己获得魔防+70%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5418,7 +5418,7 @@
       "energyCost": 4,
       "power": 120,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5462,7 +5462,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5605,7 +5605,7 @@
       "energyCost": 3,
       "power": null,
       "desc": "减伤90%，应对攻击：自己获得50%吸血。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5627,7 +5627,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5638,7 +5638,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5649,7 +5649,7 @@
       "energyCost": 3,
       "power": 45,
       "desc": "造成魔伤，2连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5671,7 +5671,7 @@
       "energyCost": 6,
       "power": 150,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5979,7 +5979,7 @@
       "energyCost": 0,
       "power": 40,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5990,7 +5990,7 @@
       "energyCost": 1,
       "power": 60,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6001,7 +6001,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成物理伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6012,7 +6012,7 @@
       "energyCost": 3,
       "power": 30,
       "desc": "造成魔伤，3连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6034,7 +6034,7 @@
       "energyCost": 3,
       "power": null,
       "desc": "减伤80%，应对攻击：敌方获得2层星陨印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6177,7 +6177,7 @@
       "energyCost": 5,
       "power": 140,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6309,7 +6309,7 @@
       "energyCost": 3,
       "power": 100,
       "desc": "对敌方精灵造成魔法伤害。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {

@@ -66,6 +66,8 @@ def energy_modifier_before_traits(state, pet, skill) -> int:
     # 攻击技能能耗（恶意逃离类）：只对攻击技能生效的带符号修正
     if category_of(skill) == ATTACK:
         bonus += buffs.get_buff_value(pet, buffs.BuffType.ATTACK_ENERGY_COST)
+    # 按技能的能耗修正（"被应对技能能耗+N"类，如冰天雪地）
+    bonus += buffs.get_skill_energy_boost(pet, skill.skill_id)
     return buffs.get_energy_cost_modifier(pet) + bonus
 
 

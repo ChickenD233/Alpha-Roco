@@ -496,7 +496,7 @@
         3251,
         3252
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -904,7 +904,7 @@
         3149,
         3150
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -940,7 +940,7 @@
         3358,
         3359
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1024,7 +1024,7 @@
         3155,
         3156
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1037,7 +1037,7 @@
         3241
       ],
       "done": true,
-      "tested": false
+      "tested": true
     },
     {
       "id": 200192,
@@ -1072,7 +1072,7 @@
         3370,
         3371
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1156,7 +1156,7 @@
         3595,
         3596
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1288,7 +1288,7 @@
         3342,
         3343
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1464,7 +1464,7 @@
         3065,
         3066
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1508,7 +1508,7 @@
         3209,
         3210
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1530,7 +1530,7 @@
         3215,
         3216
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1552,7 +1552,7 @@
         3225,
         3226
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1574,7 +1574,7 @@
         3234,
         3235
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1882,7 +1882,7 @@
         3708,
         3709
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2003,7 +2003,7 @@
         3747,
         3748
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2102,7 +2102,7 @@
         5012,
         5029
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2163,7 +2163,7 @@
       "spiritIds": [
         3227
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2433,7 +2433,7 @@
       "spiritIds": [
         5011
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2473,7 +2473,7 @@
       "spiritIds": [
         5013
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2483,7 +2483,7 @@
       "spiritIds": [
         5005
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2573,7 +2573,7 @@
       "spiritIds": [
         5025
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2583,7 +2583,7 @@
       "spiritIds": [
         5026
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2593,7 +2593,7 @@
       "spiritIds": [
         5027
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2603,7 +2603,7 @@
       "spiritIds": [
         5028
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2613,7 +2613,7 @@
       "spiritIds": [
         5054
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2633,7 +2633,7 @@
       "spiritIds": [
         5061
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2673,7 +2673,7 @@
       "spiritIds": [
         5059
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2794,7 +2794,7 @@
         3589,
         3590
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2805,7 +2805,7 @@
         3775,
         3776
       ],
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2837,6 +2837,22 @@
         200241
       ],
       "note": "200095 与 200241 同时在场时的回合结束效果触发次数尚未测试，后续需要确认。"
+    },
+    {
+      "traitIds": [
+        200211,
+        200141
+      ],
+      "note": "200211 飓风与 200141 付给恶魔的赎价：携带者被异常状态击败时，应损失1点还是2点魔力尚待确认；包括敌方攻击降低生命后触发冻结斩杀的情形。"
+    },
+    {
+      "traitIds": [
+        280025,
+        280026,
+        280027,
+        280028
+      ],
+      "note": "280025-280028（裁决/滋养/点燃/净化）：精灵首领化后将1号位技能替换为愿力冲击，之后被萌化（退化形态）时，已被替换的1号位技能应恢复为原技能、禁用、还是保留为愿力冲击，尚待确认。"
     }
   ]
 }

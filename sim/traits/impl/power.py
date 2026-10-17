@@ -35,7 +35,12 @@ from ..base import TraitHandler
 
 LIGHT = E.LIGHT  # 4 光
 EARTH = E.EARTH  # 5 地
+WATER = E.WATER  # 3 水
+FIGHT = E.FIGHT  # 11 武
+POISON = E.POISON  # 9 毒
+CUTE = E.CUTE  # 13 萌
 ICE = E.ICE  # 6 冰
+BLIZZARD = 1  # 天气：暴风雪
 STAR_MARK = 7  # 星陨印记
 CHIRP_SKILL_ID = 7130160  # 虫鸣
 
@@ -351,6 +356,91 @@ class BreakSky(TraitHandler):
         return (0.0, 0.0)
 
 
+# ---------------- 200311 冰雪魂魄 ----------------
+class IceSoul(TraitHandler):
+    trait_id = 200311
+    name = "冰雪魂魄"
+    desc = "天气为暴风雪时，冰系技能威力+100%。"
+    implemented = True
+
+    def modify_power(self, ctx):
+        if not _self(ctx) or ctx.skill is None:
+            return (0.0, 0.0)
+        if ctx.skill.element != ICE:
+            return (0.0, 0.0)
+        if ctx.weather != BLIZZARD:
+            return (0.0, 0.0)
+        return (100.0, 0.0)
+
+
+# ---------------- 200178 身经百练 ----------------
+class BattleHardened(TraitHandler):
+    trait_id = 200178
+    name = "身经百练"
+    desc = "己方精灵每应对1次，自己入场时水系和武系技能威力+20%。"
+    implemented = True
+
+    def on_counter(self, ctx):
+        # 己方精灵应对成功即累计（含自己；场下也累计）
+        if ctx.subject is None or ctx.subject.side != ctx.actor.side:
+            return
+        ctx.add_state("counters", 1)
+
+    def on_entry(self, ctx):
+        # 入场时把累计次数快照为当前生效值
+        if ctx.subject is not ctx.actor:
+            return
+        ctx.set_state("active_counters", ctx.state_of("counters", 0))
+
+    def modify_power(self, ctx):
+        if not _self(ctx) or ctx.skill is None:
+            return (0.0, 0.0)
+        if ctx.skill.element not in (WATER, FIGHT):
+            return (0.0, 0.0)
+        return (20.0 * ctx.state_of("active_counters", 0), 0.0)
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("active_counters", 0)
+        if n <= 0:
+            return None
+        return [{"name": "水系武系威力", "layers": n, "per": "20%", "gain": True}]
+
+
+# ---------------- 200181 拨浪鼓 ----------------
+class RattleDrum(TraitHandler):
+    trait_id = 200181
+    name = "拨浪鼓"
+    desc = "己方精灵每使用1次状态技能，自己入场时毒系和萌系技能威力+10。"
+    implemented = True
+
+    def on_skill_end(self, ctx):
+        # 己方精灵（含自己）使用状态技能即累计（场下也累计）
+        if ctx.skill is None or ctx.skill.category != 3:
+            return
+        if ctx.side != ctx.actor.side:
+            return
+        ctx.add_state("uses", 1)
+
+    def on_entry(self, ctx):
+        # 入场时把累计次数快照为当前生效值
+        if ctx.subject is not ctx.actor:
+            return
+        ctx.set_state("active_uses", ctx.state_of("uses", 0))
+
+    def modify_power(self, ctx):
+        if not _self(ctx) or ctx.skill is None:
+            return (0.0, 0.0)
+        if ctx.skill.element not in (POISON, CUTE):
+            return (0.0, 0.0)
+        return (0.0, 10.0 * ctx.state_of("active_uses", 0))
+
+    def display(self, state, pet):
+        n = pet.trait_state.get("active_uses", 0)
+        if n <= 0:
+            return None
+        return [{"name": "毒系萌系威力", "layers": n, "per": "10", "gain": True}]
+
+
 def register_batch1_power() -> None:
     for cls in (
         ShunFeng,
@@ -369,6 +459,9 @@ def register_batch1_power() -> None:
         Graffiti,
         FallingStar,
         BreakSky,
+        IceSoul,
+        BattleHardened,
+        RattleDrum,
     ):
         register(cls())
 

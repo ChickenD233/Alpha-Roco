@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from ... import buffs as B
+from ... import traits as T
 from ..base import TraitHandler
 from ..registry import register
 
@@ -40,7 +41,7 @@ class AddSnowball(TraitHandler):
         subject = _enemy_frozen(ctx)
         if subject is None:
             return
-        B.add_buff(
+        B.grant_buff(
             subject,
             B.BuffType.FREEZE,
             2,
@@ -62,7 +63,50 @@ class HideAndSeek(TraitHandler):
         subject = _enemy_frozen(ctx)
         if subject is None:
             return
-        B.add_buff(
+        B.grant_buff(
+            subject,
+            B.BuffType.ENERGY_COST,
+            1,
+            source_side=ctx.actor.side,
+            source_pet=ctx.actor.name,
+            source_kind="debuff",
+        )
+
+
+# ---------------- 280012 抓到你了 ----------------
+class Gotcha(TraitHandler):
+    trait_id = 280012
+    name = "抓到你了"
+    desc = "自己入场时敌方获得2层冻结，使敌方获得冻结时，也会使其获得全技能能耗+1。"
+    implemented = True
+
+    def on_entry(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        enemy = ctx.opponent()
+        if enemy is None:
+            return
+        gained = B.grant_buff(
+            enemy,
+            B.BuffType.FREEZE,
+            2,
+            source_side=ctx.actor.side,
+            source_pet=ctx.actor.name,
+            source_kind="debuff",
+        )
+        if gained > 0:
+            # 入场施加的冻结也属于"使敌方获得冻结"：广播以触发本特性的能耗+1
+            T.on_buff_gain(
+                ctx.state, enemy, B.BuffType.FREEZE, gained,
+                source_side=ctx.actor.side, source_pet=ctx.actor.name,
+                source_kind="debuff",
+            )
+
+    def on_buff_gain(self, ctx):
+        subject = _enemy_frozen(ctx)
+        if subject is None:
+            return
+        B.grant_buff(
             subject,
             B.BuffType.ENERGY_COST,
             1,
@@ -75,6 +119,7 @@ class HideAndSeek(TraitHandler):
 def register_freeze() -> None:
     register(AddSnowball())
     register(HideAndSeek())
+    register(Gotcha())
 
 
 register_freeze()

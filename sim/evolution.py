@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .data_loader import calc_all_stats, get_attributes, load_spirits, round_half_up
+from .data_loader import (
+    calc_all_stats,
+    calc_speed_range,
+    get_attributes,
+    load_spirits,
+    round_half_up,
+)
 from .enums import LORD_BLOODLINE
 from .traits import rebind
 
@@ -59,13 +65,22 @@ def evolve(pet) -> bool:
     spirit = get_spirit_by_id(pet.spirit_id)
     if spirit is None:
         return False
-    nxt = get_next_stage(spirit)
+    # 萌化恢复优先沿实际退化记录返回，不能重新选默认进化分支。
+    restoring_cute = bool(pet.cute_history)
+    nxt = (
+        get_spirit_by_id(pet.cute_history[-1])
+        if restoring_cute
+        else get_next_stage(spirit)
+    )
     if nxt is None:
         return False
+    if restoring_cute:
+        pet.cute_history.pop()
     pet.spirit_id = nxt["id"]
     pet.name = nxt["name"]
     pet.attributes = get_attributes(nxt)
     new_stats = calc_all_stats(nxt["stats"], ivs=pet.ivs, nature=pet.nature)
+    pet.speed_range = calc_speed_range(nxt["stats"]["speed"])
     old_max_hp = pet.max_hp
     old_hp = pet.hp
     pet.stats = new_stats
@@ -120,6 +135,7 @@ def lordize(pet, branch: int = 0) -> bool:
     pet.name = lord["name"]
     pet.attributes = get_attributes(lord)
     new_stats = calc_all_stats(lord["stats"], ivs=pet.ivs, nature=pet.nature)
+    pet.speed_range = calc_speed_range(lord["stats"]["speed"])
     old_max_hp = pet.max_hp
     old_hp = pet.hp
     pet.stats = new_stats
@@ -144,10 +160,13 @@ def apply_cute(pet) -> bool:
     if prev is None:
         return False
 
+    # 使用精灵自身字段保存，特性 rebind 清理 trait_state 不会丢失退化链。
+    pet.cute_history.append(pet.spirit_id)
     pet.spirit_id = prev["id"]
     pet.name = prev["name"]
     pet.attributes = get_attributes(prev)
     new_stats = calc_all_stats(prev["stats"], ivs=pet.ivs, nature=pet.nature)
+    pet.speed_range = calc_speed_range(prev["stats"]["speed"])
     old_max_hp = pet.max_hp
     old_hp = pet.hp
     pet.stats = new_stats

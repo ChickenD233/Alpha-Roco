@@ -32,8 +32,11 @@ class BattleSkill:
     counter_interrupt: bool = False  # 打断：应对成功时被应对的技能/聚能行动作废
     drive: int = 0  # 传动值：回合开始时技能向下移动的格数
     swift: bool = False  # 迅捷标记：主动换人入场时自动释放
+    # 真正的巧变：技能使用后替换/临时技能用后还原
     morph_pool: list = field(default_factory=list)  # 巧变随机池：BattleSkill 模板列表
     morph_origin: Optional["BattleSkill"] = None  # 巧变临时技能记录的原技能
+    # 每回合替换（借用/取念/复写）：独立生命周期，入场/回合末抽取，离场还原
+    round_replace_origin: Optional["BattleSkill"] = None
     windup: bool = False  # 蓄力技能标记：需要先蓄力1回合才能释放
     choice: bool = False  # 选择标记：本技能含「明/暗」两个效果，使用时二选一
     usable: bool = (
@@ -73,6 +76,7 @@ class BattlePet:
     )
     light_heal_rounds: int = 0  # 光合治愈持续回合数（回合结束回复）
     windup_skill: Optional[BattleSkill] = None  # 当前正在蓄力的技能
+    cute_history: list[int] = field(default_factory=list)  # 每次萌化前的精灵形态 ID，恢复时后进先出
     # 技能侧免死（血气"应对攻击：本回合受到致命伤害时，保留1生命值"）：
     # 记录生效回合；跨回合自动失效，无需回合末清理。
     survive_lethal_turn: int = 0
@@ -95,6 +99,14 @@ class BattlePet:
     # （用户口径：蓄力算作未使用攻击技能），释放回合照常算；重放出的攻击技能也算。
     attack_used_this_turn: bool = False
     attack_used_last_turn: bool = False
+
+    def __setattr__(self, name, value) -> None:
+        object.__setattr__(self, name, value)
+        # 生命写入统一入口：所有伤害、回复、代价和比例交换都实时检查冻结。
+        # 构造阶段 hp 先于 buffs 赋值，此时尚无冻结状态，不执行规则查询。
+        if name == "hp" and "buffs" in self.__dict__:
+            from .buffs import check_freeze
+            check_freeze(self)
 
     @property
     def alive(self) -> bool:
@@ -173,7 +185,7 @@ class BattleState:
 
 @dataclass
 class Action:
-    kind: str = "charge"
+    kind: str
     skill_index: Optional[int] = None
     pet_index: Optional[int] = None
     magic_id: Optional[int] = None

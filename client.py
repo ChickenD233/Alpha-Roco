@@ -108,13 +108,23 @@ BUFF_NAMES = {
 _BUFF_INFO = None
 
 
+def buff_display_name(btype):
+    """buff 类型显示名；按元素威力增益（power_boost_<元素id>）动态映射为'X系技能威力'。"""
+    if btype.startswith("power_boost_"):
+        el = int(btype.rsplit("_", 1)[1])
+        return f"{ELEMENT_NAMES[el]}系技能威力"
+    if btype.startswith("energy_cost_boost_"):
+        return "被应对技能能耗"
+    return BUFF_NAMES.get(btype, btype)
+
+
 def buff_classify(btype, value):
     """按类型与层数判断 buff/debuff（与引擎一致）。"""
     if btype in BUFF_ALWAYS:
         return "buff"
     if btype in BUFF_DEBUFF:
         return "debuff"
-    if btype == "energy_cost":
+    if btype in ("energy_cost", "attack_energy_cost"):
         return "buff" if value < 0 else "debuff"
     return "buff" if value >= 0 else "debuff"
 
@@ -138,11 +148,7 @@ def log(msg):
 
 def load_team(team_name):
     """加载队伍 JSON。
-
-    支持两种写法：
-      --team data/teams/冻陨2.0.json
-      --team 冻陨2.0
-    都会优先从 data/teams/ 下查找；也兼容旧位置 data/<name>.json。
+    都会优先从 data/teams/ 下查找
     返回完整 JSON 配置（含 team、resonance 等字段）。
     """
     root = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -153,10 +159,8 @@ def load_team(team_name):
         candidates.append(root / team_name)
         if team_name.endswith(".json"):
             candidates.append(root / "data" / "teams" / team_name)
-            candidates.append(root / "data" / team_name)
         else:
             candidates.append(root / "data" / "teams" / f"{team_name}.json")
-            candidates.append(root / "data" / f"{team_name}.json")
     for path in candidates:
         if path.is_file():
             with open(path, encoding="utf-8") as f:
@@ -166,8 +170,11 @@ def load_team(team_name):
     raise SystemExit(f"找不到队伍文件：{candidates[-1]}")
 
 
-def choose_lead(team):
-    log("\n选择首发精灵：")
+def choose_lead(team, opponent_team):
+    log("\n对方队伍：")
+    for i, name in enumerate(opponent_team):
+        log(f"  {i + 1}: {name}")
+    log("选择首发精灵：")
     for i, cfg in enumerate(team):
         log(f"  {i + 1}: {cfg['spirit']}")
     while True:
@@ -179,7 +186,9 @@ def choose_lead(team):
 
 def print_state(state):
     if AUTO_MODE:
-        log(f"回合 {state['turn']}  魔力 A:{state['magic']['A']} B:{state['magic']['B']}")
+        log(
+            f"回合 {state['turn']}  魔力 A:{state['magic']['A']} B:{state['magic']['B']}"
+        )
         return
     log("\n" + "=" * 56)
     log(f"回合 {state['turn']}  魔力 A:{state['magic']['A']} B:{state['magic']['B']}")
@@ -196,7 +205,6 @@ def print_state(state):
             marker = ">" if i == active_idx else " "
             speed_text = str(pet["stats"]["speed"])
             if side == MY_SIDE:
-                # 服务端已下发真实速度（含特性修正），直接使用
                 eff = pet.get("eff_speed")
                 if eff is not None:
                     speed_text = str(eff)
@@ -216,7 +224,6 @@ def print_state(state):
             elif pet.get("speed_range"):
                 eff_range = pet.get("eff_speed_range")
                 if eff_range is not None:
-                    # 服务端已下发真实速度范围（含特性修正）
                     speed_text = f"{eff_range[0]}~{eff_range[1]}"
                 else:
                     speed_mod = 0
@@ -301,11 +308,14 @@ def render_buffs(merged):
         lines.append((name, value, types[0]))
         merged = {t: v for t, v in merged.items() if t not in stats}
     for btype, value in sorted(merged.items()):
-        lines.append((BUFF_NAMES.get(btype, btype), value, btype))
+        lines.append((buff_display_name(btype), value, btype))
     out = []
     for name, value, ctype in lines:
         tag = buff_classify(ctype, value)
-        sign = "+" if tag == "buff" else "-"
+        if ctype in ("energy_cost", "attack_energy_cost"):
+            sign = "+" if value > 0 else "-"
+        else:
+            sign = "+" if tag == "buff" else "-"
         info = info_map.get(ctype, {})
         per = info.get("per_layer")
         if per is None:
@@ -624,13 +634,7 @@ def main():
 
             log(f"你是 {side} 方")
             if team is None:
-                lead = 0
                 resonance = None
-            elif args.auto:
-                lead = random.randrange(len(team))
-                log(f"自动选择首发：{lead + 1}")
-            else:
-                lead = choose_lead(team)
             # 共鸣魔法不再开局选择，直接从队伍 JSON 的 resonance 字段读取
             send_line(
                 conn,
@@ -638,10 +642,19 @@ def main():
                     "type": "config",
                     "nature": args.nature,
                     "team": team,
-                    "lead": lead,
                     "resonance": resonance,
                 },
             )
+        elif msg_type == "choose_lead":
+            opponent_team = msg.get("opponent_team") or []
+            if team is None:
+                lead = 0
+            elif args.auto:
+                lead = random.randrange(len(team))
+                log(f"自动选择首发：{lead + 1}")
+            else:
+                lead = choose_lead(team, opponent_team)
+            send_line(conn, {"type": "lead", "lead": lead})
         elif msg_type == "choose_replacement":
             awaiting_replacement = True
             if args.auto and current_state is not None:

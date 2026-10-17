@@ -9,7 +9,7 @@
 * ``DefenseAfterEnemyMark``：防御后给敌方添加印记；
 * ``SpecialDefense``：离场、动态减伤、巧变、打断等无法安全合并的防御。
 
-效果全部显式写在代码中，``skills.json.desc`` 只用于展示和人工校对。
+效果全部显式写在代码中，``skills.json`` 只用于展示和人工校对。
 """
 
 from __future__ import annotations
@@ -18,10 +18,14 @@ from ... import buffs
 from ...data_loader import build_skill_map
 from ..ops import (
     COUNTER_ATTACK,
+    deal_extra_damage as _deal_extra_damage,
     ENEMY,
     LEAVE_ENEMY,
     LEAVE_SELF,
+    SELF,
+    AddMark,
     ApplyBuff,
+    BoostCounteredSkillEnergyCost,
     DispelBuffs,
     Heal,
     LeaveField,
@@ -122,9 +126,9 @@ def _register_group(cls, rows):
         register(cls(skill_id, name, reduction, **kwargs))
 
 
-# 纯防御：只有“防御”本身，不把“只有暂未实现效果”误归到这里。
+# 纯防御：只有“防御”本身
 register(PureDefense(7020780, "防御", 0.70, implemented=True))
-# 风墙：减伤 50% + 迅捷（主动换人入场时自动释放，能耗按入场时能量判定）。
+# 风墙：减伤 50% + 迅捷
 register(PureDefense(7150150, "风墙", 0.50, implemented=True, swift=True))
 
 # 防御后给自己增益。只有明确属于该语义的技能放在这里。
@@ -148,7 +152,6 @@ _register_group(
             "有效预防",
             0.50,
             {
-                # 应对攻击：下一次行动获得先手+1（一次性先手 buff，行动时消耗）。
                 "counter_effects": (
                     ApplyBuff(buff_type=buffs.BuffType.PRIORITY, value=1),
                 ),
@@ -169,10 +172,7 @@ _register_group(
             "纤维化",
             0.80,
             {
-                # 应对攻击：自己获得物防+70%（属性增益 10%/层 → 7 层）。
-                "counter_effects": (
-                    ApplyBuff(buff_type=buffs.BuffType.DEF, value=7),
-                ),
+                "counter_effects": (ApplyBuff(buff_type=buffs.BuffType.DEF, value=7),),
                 "implemented": True,
             },
         ),
@@ -181,7 +181,6 @@ _register_group(
             "淬火",
             0.80,
             {
-                # 应对攻击：下次攻击技能威力翻倍（一次性增益，攻击技能用时取走）。
                 "counter_effects": (
                     ApplyBuff(
                         buff_type=buffs.BuffType.NEXT_ATTACK_POWER_PERCENT, value=100
@@ -195,7 +194,6 @@ _register_group(
             "暖气",
             0.70,
             {
-                # 应对攻击：下一次攻击技能威力+50（描述无 %，按固定值 1 层 = 1 点）。
                 "counter_effects": (
                     ApplyBuff(
                         buff_type=buffs.BuffType.NEXT_ATTACK_POWER_FLAT, value=50
@@ -204,40 +202,96 @@ _register_group(
                 "implemented": True,
             },
         ),
-        (7050270, "水泡盾", 0.80,
-         {
-             # 应对攻击：自己获得魔攻+70%（属性增益 10%/层 → 7 层）。
-             "counter_effects": (ApplyBuff(buff_type=buffs.BuffType.SPATK, value=7),),
-             "implemented": True,
-         },
-         ),
+        (
+            7050270,
+            "水泡盾",
+            0.80,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.SPATK, value=7),
+                ),
+                "implemented": True,
+            },
+        ),
         (
             7050280,
             "水环",
             0.60,
             {
-                # 应对攻击：自己获得全技能能耗-2（ENERGY_COST 负值 = 降耗增益）。
                 "counter_effects": (
                     ApplyBuff(buff_type=buffs.BuffType.ENERGY_COST, value=-2),
                 ),
                 "implemented": True,
             },
         ),
-        (7060250, "点亮", 0.90),
+        (
+            7060250,
+            "点亮",
+            0.90,
+            {
+                "counter_effects": (
+                    ApplyBuff(
+                        buff_type=buffs.element_power_buff_type(4),
+                        value=50,
+                        duration=buffs.DurationKind.PERMANENT,
+                    ),
+                ),
+                "implemented": True,
+            },
+        ),
         (
             7080410,
             "不动如山",
             0.90,
             {
-                # 应对攻击：自己获得物攻+50%（属性增益 10%/层 → 5 层）。
                 "counter_effects": (ApplyBuff(buff_type=buffs.BuffType.ATK, value=5),),
                 "implemented": True,
             },
         ),
-        (7140300, "防御反击", 0.80),
-        (7150310, "羽翼庇护", 0.70),
-        (7170260, "虚化", 0.80),
-        (7180210, "等价交换", 0.90),
+        (
+            7140300,
+            "防御反击",
+            0.80,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.SKILL_POWER_FLAT, value=40),
+                ),
+                "implemented": True,
+            },
+        ),
+        (
+            7150310,
+            "羽翼庇护",
+            0.70,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.HIT_COUNT_FLAT, value=2),
+                ),
+                "implemented": True,
+            },
+        ),
+        (
+            7170260,
+            "虚化",
+            0.80,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.SPDEF, value=7),
+                ),
+                "implemented": True,
+            },
+        ),
+        (
+            7180210,
+            "等价交换",
+            0.90,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.LIFESTEAL, value=5),
+                ),
+                "implemented": True,
+            },
+        ),
     ),
 )
 
@@ -256,9 +310,39 @@ _register_group(
                 "implemented": True,
             },
         ),
-        (7080220, "刺盾", 0.70),
-        (7080400, "淤泥表皮", 0.80),
-        (7090200, "冰天雪地", 0.80),
+        (
+            7080220,
+            "刺盾",
+            0.70,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.ATK, value=-7, target=ENEMY),
+                ),
+                "implemented": True,
+            },
+        ),
+        (
+            7080400,
+            "淤泥表皮",
+            0.80,
+            {
+                "counter_effects": (
+                    ApplyBuff(
+                        buff_type=buffs.BuffType.HIT_COUNT_FLAT, value=-3, target=ENEMY
+                    ),
+                ),
+                "implemented": True,
+            },
+        ),
+        (
+            7090200,
+            "冰天雪地",
+            0.80,
+            {
+                "counter_effects": (BoostCounteredSkillEnergyCost(value=3),),
+                "implemented": True,
+            },
+        ),
         (
             7090210,
             "冰墙",
@@ -270,7 +354,17 @@ _register_group(
                 "implemented": True,
             },
         ),
-        (7160290, "捧杀", 0.90),
+        (
+            7160290,
+            "捧杀",
+            0.90,
+            {
+                "counter_effects": (
+                    ApplyBuff(buff_type=buffs.BuffType.CUTE, value=1, target=ENEMY),
+                ),
+                "implemented": True,
+            },
+        ),
     ),
 )
 
@@ -278,8 +372,24 @@ _register_group(
 _register_group(
     DefenseAfterSelfMark,
     (
-        (7050420, "潮汐", 0.60),
-        (7160340, "委屈", 0.70),
+        (
+            7050420,
+            "潮汐",
+            0.60,
+            {
+                "counter_effects": (AddMark(mark_id=11, stacks=1, target=SELF),),
+                "implemented": True,
+            },
+        ),
+        (
+            7160340,
+            "委屈",
+            0.70,
+            {
+                "counter_effects": (AddMark(mark_id=8, stacks=1, target=SELF),),
+                "implemented": True,
+            },
+        ),
     ),
 )
 
@@ -287,8 +397,24 @@ _register_group(
 _register_group(
     DefenseAfterEnemyMark,
     (
-        (7090340, "冰蛋壳", 0.70),
-        (7190400, "冥想", 0.80),
+        (
+            7090340,
+            "冰蛋壳",
+            0.70,
+            {
+                "counter_effects": (AddMark(mark_id=3, stacks=2),),
+                "implemented": True,
+            },
+        ),
+        (
+            7190400,
+            "冥想",
+            0.80,
+            {
+                "counter_effects": (AddMark(mark_id=7, stacks=2),),
+                "implemented": True,
+            },
+        ),
     ),
 )
 
@@ -329,10 +455,61 @@ _register_group(
         (7120300, "毒肽", 0.70),
         (7130220, "掩护", 0.70),
         (7130320, "虫结阵", 0.80),
-        (7140180, "硬门", 0.00),
-        (7140190, "听桥", 0.60),
     ),
 )
+
+
+# ---------------- 7140180 硬门 ----------------
+class HardGate(SpecialDefense):
+    """应对攻击：打断被应对技能，并造成 90 威力物伤。
+
+    减伤 0%（desc 无减伤，能耗 2 取自 skills.json）。打断是静态属性
+    （counter_interrupt，SPEC B40）：对方本次攻击行动立即作废——故自身不会受到
+    这次攻击。90 威力物伤在**自己的行动结算时**产生（防御应对攻击强制先手，
+    先给对面计算伤害）：若打死对方则直接力竭。附加伤害直接在 on_defense
+    里用 calc_damage 结算，缺省沿用本技能属性（武系 element 11），类别显式给物理（category 0）。
+    """
+
+    def __init__(self):
+        super().__init__(7140180, "硬门", 0.00, implemented=True)
+        self.counter_interrupt = True
+
+    def on_defense(self, ctx):
+        if not ctx.is_counter:
+            return
+        _deal_extra_damage(ctx, 90, category=0)
+
+
+register(HardGate())
+
+
+# ---------------- 7140190 听桥 ----------------
+class ListenBridge(SpecialDefense):
+    """减伤 60%；应对攻击：先对敌方造成武系物理伤害（威力与被应对技能相等）。
+
+    应对判定使听桥强制先手，反击伤害在**自己的行动结算时**产生：
+    **先给对面计算伤害，对面若还存活，自己才吃这次攻击**——反击直接打死的话，
+    对方的行动不再结算、自己不扣血。威力取被应对技能的**当前威力**
+    （数据威力 + 永久成长 skill_state["power"]，结算当时实时读取）；被应对行动
+    无技能实体（聚能等）时无对象则不结算。附加伤害直接在 on_defense 里用
+    calc_damage 结算（武系 element 11、物理类别，完整经统一威力管线修正）。
+    """
+
+    def __init__(self):
+        super().__init__(7140190, "听桥", 0.60, implemented=True)
+
+    def on_defense(self, ctx):
+        if not ctx.is_counter:
+            return
+        incoming = ctx.extra.get("incoming_skill")
+        if incoming is None or incoming.power is None:
+            return
+        growth = int(incoming.skill_state.get("power", 0) or 0)
+        power = int(incoming.power) + growth
+        _deal_extra_damage(ctx, power, element=11, category=0)
+
+
+register(ListenBridge())
 
 
 class PhaseShift(SpecialDefense):

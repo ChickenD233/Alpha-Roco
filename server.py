@@ -177,6 +177,26 @@ def read_action_with_energy(f, conn, state, side):
         raw = recv_line(f)
         if raw is None:
             return None
+        if not isinstance(raw, dict) or raw.get("kind") not in (
+            "skill",
+            "charge",
+            "switch",
+            "flee",
+        ):
+            send_line(
+                conn, {"type": "error", "message": "必须显式提供有效行动类型 kind"}
+            )
+            continue
+        if raw["kind"] == "skill" and type(raw.get("skill_index")) is not int:
+            send_line(
+                conn, {"type": "error", "message": "技能行动必须提供整数 skill_index"}
+            )
+            continue
+        if raw["kind"] == "switch" and type(raw.get("pet_index")) is not int:
+            send_line(
+                conn, {"type": "error", "message": "换人行动必须提供整数 pet_index"}
+            )
+            continue
         if is_valid_skill_energy(raw, state, side) and is_valid_normal_switch(
             raw, state, side
         ):
@@ -239,9 +259,6 @@ def main():
     raw_config_a = recv_line(f_a)
     raw_config_b = recv_line(f_b)
 
-    lead_a = raw_config_a.get("lead", 0) if raw_config_a else 0
-    lead_b = raw_config_b.get("lead", 0) if raw_config_b else 0
-
     team_a = raw_config_a.get("team") if raw_config_a else None
     team_b = raw_config_b.get("team") if raw_config_b else None
     resonance_a = raw_config_a.get("resonance") if raw_config_a else None
@@ -261,11 +278,19 @@ def main():
 
     pets_a = make_team("A", team_a, spirits)
     pets_b = make_team("B", team_b, spirits)
-    state = create_team_battle(pets_a, pets_b)
-    if 0 <= lead_a < len(pets_a):
-        state.active["A"] = lead_a
-    if 0 <= lead_b < len(pets_b):
-        state.active["B"] = lead_b
+
+    send_line(
+        conn_a, {"type": "choose_lead", "opponent_team": [p.name for p in pets_b]}
+    )
+    send_line(
+        conn_b, {"type": "choose_lead", "opponent_team": [p.name for p in pets_a]}
+    )
+    raw_lead_a = recv_line(f_a)
+    raw_lead_b = recv_line(f_b)
+    lead_a = raw_lead_a.get("lead", 0) if raw_lead_a else 0
+    lead_b = raw_lead_b.get("lead", 0) if raw_lead_b else 0
+
+    state = create_team_battle(pets_a, pets_b, active_a=lead_a, active_b=lead_b)
     state.resonance_magic["A"] = resonance_a
     state.resonance_magic["B"] = resonance_b
 
@@ -304,7 +329,7 @@ def main():
                 break
 
             action_a = Action(
-                kind=raw_a.get("kind", "charge"),
+                kind=raw_a["kind"],
                 skill_index=raw_a.get("skill_index"),
                 pet_index=raw_a.get("pet_index"),
                 magic_id=raw_a.get("magic_id"),
@@ -312,7 +337,7 @@ def main():
                 choice_branch=raw_a.get("choice_branch", 0),
             )
             action_b = Action(
-                kind=raw_b.get("kind", "charge"),
+                kind=raw_b["kind"],
                 skill_index=raw_b.get("skill_index"),
                 pet_index=raw_b.get("pet_index"),
                 magic_id=raw_b.get("magic_id"),
