@@ -145,6 +145,37 @@ class LibraryGuardian(TraitHandler):
         B.grant_buff(ctx.actor, B.BuffType.ATK, 10, source_kind="trait")
         B.grant_buff(ctx.actor, B.BuffType.SPATK, 10, source_kind="trait")
 
+    def display(self, state, pet):
+        layers = sum(b.value for b in pet.buffs
+                     if b.buff_type == B.BuffType.ATK and b.source_kind == "trait")
+        if layers <= 0:
+            return None
+        return [{"name": "双攻", "layers": layers, "per": "10%", "gain": True}]
+
+
+# ---------------- 200245 构装契约者 ----------------
+class ConstructContractor(TraitHandler):
+    trait_id = 200245
+    name = "构装契约者"
+    desc = "入场时，若敌方魔力值为1，自己获得双防+100%。"
+    implemented = True
+
+    def on_entry(self, ctx):
+        if ctx.subject is not ctx.actor:
+            return
+        enemy_side = "B" if ctx.actor.side == "A" else "A"
+        if ctx.state.magic[enemy_side] != 1:
+            return
+        B.grant_buff(ctx.actor, B.BuffType.DEF, 10, source_kind="trait")
+        B.grant_buff(ctx.actor, B.BuffType.SPDEF, 10, source_kind="trait")
+
+    def display(self, state, pet):
+        layers = sum(b.value for b in pet.buffs
+                     if b.buff_type == B.BuffType.DEF and b.source_kind == "trait")
+        if layers <= 0:
+            return None
+        return [{"name": "双防", "layers": layers, "per": "10%", "gain": True}]
+
 
 # ---------------- 200126 洁癖 ----------------
 class Cleanliness(TraitHandler):
@@ -652,17 +683,25 @@ class GelatinSheet(TraitHandler):
     implemented = True
 
     def on_leave(self, ctx):
-        # 自己离场时，更换入场的精灵获得双防+20%（各2层）与免疫冻结。
-        # 效果作用于友方入场精灵（不是特性拥有者自身），用普通 buff 以便在
-        # 该精灵的 buff 区正常显示（source_kind="trait" 会被客户端过滤）。
         if ctx.subject is not ctx.actor:
             return
         incoming = ctx.extra.get("incoming")
+        effects = (
+            (B.BuffType.DEF, 2, ""),
+            (B.BuffType.SPDEF, 2, ""),
+            (B.BuffType.FREEZE_IMMUNE, 1, "trait"),
+        )
         if incoming is None:
+            ctx.state.pending_entry_buffs[ctx.actor.side].extend(
+                (buff_type, value, B.DurationKind.NORMAL, ctx.actor.side, ctx.actor.name, source_kind)
+                for buff_type, value, source_kind in effects
+            )
             return
-        B.grant_buff(incoming, B.BuffType.DEF, 2)
-        B.grant_buff(incoming, B.BuffType.SPDEF, 2)
-        B.grant_buff(incoming, B.BuffType.FREEZE_IMMUNE, 1)
+        for buff_type, value, source_kind in effects:
+            B.grant_buff(
+                incoming, buff_type, value, source_side=ctx.actor.side,
+                source_pet=ctx.actor.name, source_kind=source_kind,
+            )
 
 
 # ---------------- 200254 美拉德反应 ----------------
@@ -673,8 +712,6 @@ class MaillardReaction(TraitHandler):
     implemented = True
 
     def on_leave(self, ctx):
-        # 自己离场时，更换入场的精灵获得双攻+20%（各2层）与免疫灼烧。
-        # 效果作用于友方入场精灵，用普通 buff 以便正常显示（见 200253 说明）。
         if ctx.subject is not ctx.actor:
             return
         incoming = ctx.extra.get("incoming")
@@ -682,7 +719,10 @@ class MaillardReaction(TraitHandler):
             return
         B.grant_buff(incoming, B.BuffType.ATK, 2)
         B.grant_buff(incoming, B.BuffType.SPATK, 2)
-        B.grant_buff(incoming, B.BuffType.BURN_IMMUNE, 1)
+        B.grant_buff(
+            incoming, B.BuffType.BURN_IMMUNE, 1,
+            source_side=ctx.actor.side, source_pet=ctx.actor.name, source_kind="trait",
+        )
 
 
 # ---------------- 200202 茶多酚 ----------------
@@ -701,7 +741,10 @@ class TeaPolyphenol(TraitHandler):
             return
         heal = int(incoming.max_hp * 0.2)
         incoming.hp = min(incoming.max_hp, incoming.hp + heal)
-        B.grant_buff(incoming, B.BuffType.LEECH_IMMUNE, 1)
+        B.grant_buff(
+            incoming, B.BuffType.LEECH_IMMUNE, 1,
+            source_side=ctx.actor.side, source_pet=ctx.actor.name, source_kind="trait",
+        )
 
 
 # ---------------- 200163 快充 ----------------
@@ -915,6 +958,7 @@ def register_entry() -> None:
         Focus,
         SlowWarm,
         LibraryGuardian,
+        ConstructContractor,
         Cleanliness,
         Nightmare,
         Crackle,

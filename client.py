@@ -265,6 +265,9 @@ def print_state(state):
                 merged[btype] = merged.get(btype, 0) + buff["value"]
             for line in render_buffs(merged):
                 log(f"     {line}")
+            for effect in pet.get("bursts", []):
+                if effect["type"] == "skill_use_count":
+                    log(f"     使用次数 +{effect['value']}")
             for skill in pet["skills"]:
                 elem = (
                     ELEMENT_NAMES[skill["element"]]

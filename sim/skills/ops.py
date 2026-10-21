@@ -39,7 +39,7 @@ from dataclasses import dataclass
 from typing import Callable, ClassVar, Optional
 
 from .. import buffs, burst, marks, skill_utils, traits, weather as weather_mod
-from ..damage import calc_damage
+from ..damage import calc_damage, power_modifiers
 from ..data_loader import build_skill_map, load_typechart
 from ..evolution import can_cute
 from ..models import BattleSkill
@@ -556,26 +556,10 @@ def _extra_power_modifiers(ctx: SkillContext, target_pet, extra_skill) -> tuple:
     这里只补：印记、迸发（行动时已取走的 active_bursts，经 ctx.extra 传入）、
     特性威力修正（query_power，按附加伤害自身的属性/类别匹配）。
     """
-    percent = 0.0
-    flat = 0.0
-    positive = marks.get_mark(ctx.state, ctx.actor.side, marks.POSITIVE)
-    if positive is not None:
-        if positive["id"] == 0:
-            percent += 10.0 * positive["stacks"]
-        if positive["id"] == 2:
-            percent += 30.0 * positive["stacks"]
-        if positive["id"] == 12 and ctx.is_first:
-            percent += 20.0 * positive["stacks"]
-    for active_burst in ctx.extra.get("active_bursts", ()):
-        if active_burst["type"] == "attack_power_flat":
-            flat += active_burst["value"]
-        if active_burst["type"] == "attack_power_percent":
-            percent += active_burst["value"]
-    percent, flat = traits.query_power(
-        ctx.state, ctx.actor, target_pet, percent, flat,
-        is_first=ctx.is_first, skill=extra_skill,
+    return power_modifiers(
+        ctx.state, ctx.actor, target_pet, extra_skill,
+        is_first=ctx.is_first, active_bursts=ctx.extra.get("active_bursts", ()),
     )
-    return percent, flat
 
 
 @dataclass(kw_only=True)

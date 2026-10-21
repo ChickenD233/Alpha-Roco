@@ -39,7 +39,7 @@ from __future__ import annotations
 from ... import buffs as B
 from ... import skill_utils
 from ... import traits as T
-from ...damage import calc_damage
+from ...damage import calc_damage, power_modifiers
 from ...data_loader import load_typechart
 from ...enums import Element as E
 from ..base import TraitHandler
@@ -399,6 +399,33 @@ class SoulBurn(TraitHandler):
             )
 
 
+# ---------------- 200293 爆裂玉米 ----------------
+class BurstingCorn(TraitHandler):
+    trait_id = 200293
+    name = "爆裂玉米"
+    desc = "草系技能使敌方获得4层灼烧，火系技能使敌方获得1层寄生。"
+    implemented = True
+
+    def on_skill_start(self, ctx):
+        if ctx.subject is not ctx.actor or ctx.skill is None:
+            return
+        target = ctx.target
+        if target is None or target.side == ctx.actor.side:
+            return
+        if ctx.skill.element == GRASS:
+            buff_type, value = B.BuffType.BURN, 4
+        elif ctx.skill.element == FIRE:
+            buff_type, value = B.BuffType.LEECH, 1
+        else:
+            return
+        B.grant_buff(
+            target, buff_type, value,
+            source_side=ctx.actor.side,
+            source_pet=ctx.actor.name,
+            source_kind="debuff",
+        )
+
+
 # ---------------- 200111 溶解扩散 ----------------
 class DissolveSpread(TraitHandler):
     trait_id = 200111
@@ -482,45 +509,28 @@ class Sentinel(TraitHandler):
 
     def _enemy_usable_skills(self, ctx, opponent):
         """敌方当前真正能使用的技能（含能量/冷却/特性限制/蓄力状态）。"""
-        # 蓄力状态下敌方只能使用已蓄力的技能、聚能或换人
-        windup = opponent.windup_skill
-        if windup is not None:
-            idx = next((i for i, s in enumerate(opponent.skills) if s is windup), None)
-            if idx is None:
-                return []  # 已不在技能槽（如被巧变替换）
-            if skill_utils.is_skill_on_cooldown(opponent, windup.skill_id):
-                return []
-            if not T.query_skill_usable(ctx.state, opponent, windup, skill_index=idx):
-                return []
-            # 释放回合不再校验能量（能量已在蓄力回合支付）
-            return [(idx, windup)]
+        from ...battle import can_use_skill
+
         usable = []
         for i, skill in enumerate(opponent.skills):
             if skill.category not in (0, 1) or skill.power is None:
                 continue
-            # 蓄力技能首次选择只是进入蓄力，本回合不造成伤害
-            if getattr(skill, "windup", False):
+            if skill.windup and opponent.windup_skill is not skill:
                 continue
-            if skill_utils.is_skill_on_cooldown(opponent, skill.skill_id):
-                continue
-            if not T.query_skill_usable(ctx.state, opponent, skill, skill_index=i):
-                continue
-            # 真实能耗（含天气/印记/buff/特性修正）；不探测"能量不足兜底"以免产生副作用
-            if (
-                skill_utils.true_energy_cost(ctx.state, opponent, skill)
-                > opponent.energy
-            ):
-                continue
-            usable.append((i, skill))
+            if can_use_skill(ctx.state, opponent.side, skill, skill_index=i):
+                usable.append((i, skill))
         return usable
 
     def _damage_of(self, ctx, opponent, skill):
+        percent, flat = power_modifiers(ctx.state, opponent, ctx.actor, skill)
         result = calc_damage(
             opponent,
             ctx.actor,
             skill,
             load_typechart(),
             damage_reduction=0.0,
+            extra_power_percent=percent,
+            extra_power_flat=flat,
             state=ctx.state,
             is_first=False,
         )
@@ -536,8 +546,7 @@ class Sentinel(TraitHandler):
             )
         return result["damage"] * hit_count
 
-    def on_turn_start(self, ctx):
-        # 每回合重新判断，避免速度加成和行动后脱离标记残留。
+    def on_round_ready(self, ctx):
         ctx.set_state("sentinel_triggered", False)
         ctx.set_state("sentinel_leave_after_action", False)
         if not ctx.is_active():
@@ -558,6 +567,11 @@ class Sentinel(TraitHandler):
         if ctx.target is not ctx.actor:
             return 0
         return 50 if ctx.state_of("sentinel_triggered", False) else 0
+
+    def display(self, state, pet):
+        if not pet.trait_state.get("sentinel_triggered", False):
+            return None
+        return [{"name": "速度", "layers": 1, "per": "50", "gain": True}]
 
 
 # ---------------- 200129 快锤 ----------------
@@ -764,6 +778,7 @@ def register_skill() -> None:
         KaKaDash,
         VenomGland,
         SoulBurn,
+        BurstingCorn,
         DissolveSpread,
         SpreadErosion,
         GreedyAlgorithm,

@@ -163,6 +163,9 @@ class TraitHandler:
     def on_round_end(self, ctx: TraitContext) -> None:
         """特性效果阶段（按双方有效速度顺序广播）。"""
 
+    def on_round_ready(self, ctx: TraitContext) -> None:
+        """回合末全部结算完成后，为下一回合准备状态。"""
+
     def on_buff_gain(self, ctx: TraitContext) -> None:
         """获得增益/减益（ctx.extra["buff_type"]/["value"]）。"""
 
@@ -189,6 +192,10 @@ class TraitHandler:
     def allow_cute_beyond_limit(self, pet: BattlePet) -> bool:
         """无法继续退化时是否仍可获得萌化 buff（无忧无虑 200182：萌化层数不受可退化次数限制）；默认不允许。"""
         return False
+
+    def modify_buff_gain_layers(self, pet: BattlePet, buff_type: str, value: int) -> int:
+        """获得效果时额外层数，沿原数值方向增加；默认无修正。"""
+        return 0
 
     # ================= 修正钩子 =================
     # 修正查询默认只作用于"被查询精灵自身"的特性；

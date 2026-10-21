@@ -46,6 +46,33 @@ def display_ability_multiplier(attack_stage: float, defense_stage: float) -> flo
     )
 
 
+def power_modifiers(state, attacker, defender, skill, *, element=None,
+                    is_first=False, active_bursts=()) -> tuple:
+    """汇总持续威力修正与调用方传入的迸发；不消费状态。"""
+    from . import marks, weather
+
+    eff_element = skill.element if element is None else element
+    percent = buffs.get_element_power_percent(attacker, eff_element)
+    if weather.get_weather_id(state) == weather.RAIN and eff_element == 3:
+        percent += 50.0
+    flat = 0.0
+    positive = marks.get_mark(state, attacker.side, marks.POSITIVE)
+    if positive is not None:
+        if positive["id"] == 0:
+            percent += 10.0 * positive["stacks"]
+        elif positive["id"] == 2:
+            percent += 30.0 * positive["stacks"]
+        elif positive["id"] == 12 and is_first:
+            percent += 20.0 * positive["stacks"]
+    for item in active_bursts:
+        if item["type"] == "attack_power_flat":
+            flat += item["value"]
+        elif item["type"] == "attack_power_percent":
+            percent += item["value"]
+    return traits.query_power(state, attacker, defender, percent, flat,
+                              is_first=is_first, skill=skill)
+
+
 def calc_damage(
     attacker: BattlePet,
     defender: BattlePet,

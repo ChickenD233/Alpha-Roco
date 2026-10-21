@@ -382,6 +382,8 @@ def switch_in(
         if negative is not None and negative["id"] == 1:
             loss = int(incoming.max_hp * 0.06 * negative["stacks"])
             incoming.hp = max(0, incoming.hp - loss)
+            if loss > 0:
+                logs.append(f"{side} {incoming.name} 受到棘刺印记 {loss} 伤害")
         if negative is not None and negative["id"] == 5:
             loss = negative["stacks"]
             incoming.energy = max(0, incoming.energy - loss)
@@ -491,9 +493,17 @@ def _resolve_pending_reenter(state: BattleState) -> None:
     """回合结束结算后处理返场请求（特性如安可 200290；技能如过载回路
     "回合结束自己返场"——技能在 STAGE_ROUND_END 里经 Reenter 登记到同一通道）。"""
     for side in ("A", "B"):
+        rewards = state.pending_reenter_bursts[side]
+        state.pending_reenter_bursts[side] = []
         if state.pending_reenter[side]:
             state.pending_reenter[side] = False
-            reenter(state, side, state.log)
+            pet = _active_pet(state, side)
+            if reenter(state, side, state.log):
+                for owner, burst_type, value in rewards:
+                    if owner is pet and pet.hp > 0 and _active_pet(state, side) is pet:
+                        burst.add_burst(
+                            pet, burst_type, value, expires_on_turn=state.turn + 1
+                        )
 
 
 def _resolve_trait_leave(state: BattleState) -> None:
@@ -869,9 +879,12 @@ def _round_end(state: BattleState) -> None:
             requested = ctx.extra.get("reenter")
             if requested:
                 state.pending_reenter[requested] = True
+                for burst_type, value in ctx.extra.get("reenter_bursts", ()):
+                    state.pending_reenter_bursts[requested].append((pet, burst_type, value))
     for team in state.teams.values():
         for pet in team:
             pet.overload_current.clear()
+            burst.expire_bursts(pet, state.turn)
     for side in ("A", "B"):
         _apply_faint(state, side)
     _resolve_trait_leave(state)
@@ -884,6 +897,7 @@ def _round_end(state: BattleState) -> None:
         _apply_turn_limit(state)
     if state.winner is None:
         apply_drive(state)
+        traits.emit(state, "round_ready", scope="all")
 
 
 def _resolve_action(
@@ -984,7 +998,7 @@ def _resolve_action(
         )
         # 特性：行动完成后的条件性脱离（如哨兵）。
         if pet.trait_state.pop("sentinel_leave_after_action", False):
-            _force_switch_after_leave(state, side, logs)
+            state.pending_action_leave[side] = True
         return logs
 
     if action.kind != "skill" or type(action.skill_index) is not int:
@@ -1560,7 +1574,7 @@ def _resolve_action(
         )
 
     if pet.trait_state.pop("sentinel_leave_after_action", False):
-        leave = True
+        state.pending_action_leave[side] = True
     if leave:
         _force_switch_after_leave(state, side, logs)
 
@@ -1682,12 +1696,13 @@ def _resolve_repeated(
         next_bonus = pet.overload_current.pop("__next__", 0)
         if next_bonus:
             count += next_bonus
+    if action.kind in ("skill", "charge"):
         for b in pet.bursts:
             if b["type"] == "skill_use_count":
                 count += b["value"]
-        # 蓄力技能不参与连击/过载重复：否则会出现蓄力与释放同一回合结算。
-        if getattr(skill, "windup", False):
-            count = 1
+    # 蓄力技能不参与连击/过载重复：否则会出现蓄力与释放同一回合结算。
+    if action.kind == "skill" and getattr(skill, "windup", False):
+        count = 1
     used = []
     for _ in range(count):
         if state.winner is not None or state.active[side] < 0:
@@ -2165,6 +2180,7 @@ def pet_to_dict(
         "bloodline": pet.bloodline,
         "speed_range": pet.speed_range,
         "skill_cooldowns": sorted(pet.skill_cooldowns),
+        "bursts": burst.get_bursts(pet),
         "buffs": [
             {
                 "type": buff.buff_type,

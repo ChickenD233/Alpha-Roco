@@ -1689,14 +1689,11 @@ register(DragonRoar())
 class SilkenThorn(OpsSkill):
     """造成魔伤，若自己上回合未使用攻击技能，本技能威力永久+20。
 
-    - "上回合未使用攻击技能"按**上一回合**的实战记录判定
-      （BattlePet.attack_used_last_turn，回合开始时由引擎平移；**蓄力回合算作
-      未使用攻击技能**——用户口径；聚能/换人/防御/状态技能同样不算；释放回合
-      照常算）。重放出的攻击技能算（那一回合确实打出了攻击技能），与
-      used_skill_counts "疾风连袭的重放不算新的使用"是两个不同的问题。
-    - "回合末结算"（用户口径）：+20 与其它命中附加效果同走 B39——命中时只登记，
-      回合末统一结算写入 skill_state 的永久成长，故不改变本次伤害，从下次使用
-      起生效；同一回合内多次使用（使用次数+1）会各结算一次。
+    - 在上一回合结束时按 attack_used_this_turn 结算成长，使下一回合显示与
+      出招立即使用增长后的威力，避免回合末再读 attack_used_last_turn 而晚一回合。
+      蓄力回合、聚能、防御及状态技能不算使用攻击技能；攻击技能释放与重放算。
+    - 在场时每回合末检查刚结束的本回合：未使用攻击技能则永久 +20，进入下一
+      回合显示及出招时即已生效。不要求使用本技能；场下不成长，每回合最多一次。
     """
 
     skill_id = 7100260
@@ -1704,12 +1701,12 @@ class SilkenThorn(OpsSkill):
     category = 1
     implemented = True
 
-    hit_effects = (
-        When(
-            condition=Not(condition=UsedAttackSkillLastTurn()),
-            effects=(SkillGrowth(field=GROWTH_POWER, delta=20),),
-        ),
-    )
+    def on_round_end(self, ctx):
+        if ctx.state_of("growth_checked_turn") == ctx.state.turn:
+            return
+        ctx.set_state("growth_checked_turn", ctx.state.turn)
+        if not ctx.actor.attack_used_this_turn:
+            SkillGrowth(field=GROWTH_POWER, delta=20).apply(ctx)
 
 
 register(SilkenThorn())

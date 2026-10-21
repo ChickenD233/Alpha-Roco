@@ -270,6 +270,13 @@ def grant_buff(
     """
     if not can_gain_buff(pet, buff_type, value):
         return 0
+    if source_kind != "trait" and is_buff(buff_type, value):
+        from .traits.registry import get_handler
+
+        handler = get_handler(pet.trait_id)
+        if handler is not None:
+            extra_layers = handler.modify_buff_gain_layers(pet, buff_type, value)
+            value += extra_layers if value > 0 else -extra_layers
     if buff_type == BuffType.CUTE:
         applied = 0
         for _ in range(value):
@@ -487,6 +494,7 @@ def _apply_poison(pet, typechart, state=None) -> None:
     damage = int(pet.max_hp * 0.03 * layers * mult)
     _apply_damage(pet, damage, state.turn if state is not None else None)
     if damage > 0 and state is not None:
+        state.log.append(f"{pet.side} {pet.name} 受到中毒 {damage} 伤害")
         from . import traits  # 延迟导入，避免与 traits.impl 循环依赖
 
         traits.emit(
@@ -511,6 +519,7 @@ def _apply_burn(pet, typechart, state=None) -> None:
     damage = int(pet.max_hp * 0.02 * layers * mult)
     _apply_damage(pet, damage, state.turn if state is not None else None)
     if damage > 0 and state is not None:
+        state.log.append(f"{pet.side} {pet.name} 受到灼烧 {damage} 伤害")
         from . import traits  # 延迟导入，避免与 traits.impl 循环依赖
 
         traits.emit(
@@ -551,6 +560,7 @@ def _apply_leech(pet, state, typechart) -> None:
     damage = int(pet.max_hp * 0.02 * layers * mult)
     _apply_damage(pet, damage, state.turn if state is not None else None)
     if damage > 0:
+        state.log.append(f"{pet.side} {pet.name} 受到寄生 {damage} 伤害")
         from . import traits  # 延迟导入，避免与 traits.impl 循环依赖
 
         traits.emit(

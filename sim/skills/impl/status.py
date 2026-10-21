@@ -770,10 +770,9 @@ register(Superposition())
 class OverloadCircuit(OpsSkill):
     """回合结束自己返场，下回合所选技能使用次数+1。
 
-    - "使用次数+1"= 执行次数 +1（同噼啪！ 200162 的"所选技能使用次数+1"，只是
-      延后一回合）：Overload(scope="next") 写入 ``overload_next["__next__"]``，
-      下回合开始轮转到 ``overload_current``，引擎在行动结算时把 +1 记到该回合
-      **所选技能**上（聚能不生效；蓄力技能不参与重复）。一次性，回合末清空。
+    - 返场成功后获得真实迸发：使用次数 +1，持续到下回合末。由下一次行动消费，
+      未消费则到期移除；不使用 overload_next 的隐藏过载计数。
+      蓄能也是状态技能行动，使用次数 +1 时执行两次；蓄力技能不参与重复。
     - "回合结束自己返场"：Reenter 登记，引擎在回合末技能结算之后、力竭结算后
       与特性返场同一时点执行（离场+立即入场，完整重跑入场结算）；本回合已入场
       的精灵免疫返场效果（entry_turn == 当前回合）。
@@ -788,13 +787,14 @@ class OverloadCircuit(OpsSkill):
     implemented = True
 
     def on_status(self, ctx):
-        apply_effects(ctx, (Overload(count=1, scope="next"),))
         ctx.set_state("used_turn", ctx.state.turn)
 
     def on_round_end(self, ctx):
         if ctx.state_of("used_turn") != ctx.state.turn:
             return
+        ctx.set_state("used_turn", None)
         apply_effects(ctx, (Reenter(),))
+        ctx.extra["reenter_bursts"] = [("skill_use_count", 1)]
 
 
 register(OverloadCircuit())
@@ -973,8 +973,8 @@ class BearingSupport(OpsSkill):
     """左右相邻技能的永久能耗支撑。
 
     携带时，当前技能列表中轴承支撑左右相邻的技能能耗 -1；每次主动
-    使用后，该被动永久额外 -1。相邻关系按当前技能列表的线性位置判定，
-    传动重排后自动随技能位置变化；位于边缘时只有一侧相邻技能。
+    使用后，该被动永久额外 -1。相邻关系按当前技能列表循环判定，
+    传动重排后自动随技能位置变化：1号位的两侧是4、2号位，4号位的两侧是3、1号位。
     """
 
     skill_id = 7070060
@@ -993,9 +993,10 @@ class BearingSupport(OpsSkill):
         source_index = next(
             (i for i, candidate in enumerate(skills) if candidate is ctx.skill), -1
         )
-        if source_index < 0 or target_index == source_index:
+        if source_index < 0 or target_index == source_index or len(skills) <= 1:
             return 0
-        if abs(target_index - source_index) != 1:
+        neighbors = {(source_index - 1) % len(skills), (source_index + 1) % len(skills)}
+        if target_index not in neighbors:
             return 0
         reduction = 1 + int(ctx.state_of(self._PASSIVE_REDUCTION, 0) or 0)
         return -reduction

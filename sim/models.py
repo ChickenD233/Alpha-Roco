@@ -159,6 +159,8 @@ class BattleState:
     # 返场请求（精灵离场并立即入场，如特性安可 200290、技能过载回路"回合结束自己返场"）
     # ——引擎在回合末自动执行，无需玩家输入
     pending_reenter: dict = field(default_factory=lambda: {"A": False, "B": False})
+    # 返场成功后给予的迸发，记录请求者，避免发给被替换后的其它精灵。
+    pending_reenter_bursts: dict = field(default_factory=lambda: {"A": [], "B": []})
     # 技能驱动的脱离请求（如移花接木"随后脱离"、吓退"敌方脱离"）：该侧行动结算后立即
     # 离场并重新选人。与 pending_switch 的区别：它在**回合中**生效并跳过离场者的回合末结算。
     pending_action_leave: dict = field(default_factory=lambda: {"A": False, "B": False})

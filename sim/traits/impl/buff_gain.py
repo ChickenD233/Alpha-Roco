@@ -1,6 +1,6 @@
 """增益响应类特性（on_buff_gain）。
 
-- 200084 营养液泡  获得增益时，额外获得层数+2。
+- 200084 营养液泡  在 grant_buff 写入前，将本次普通增益层数额外增加2。
 - 200221 衡量      入场时复制敌方的增益；在场时敌方获得增益自己也获得。
 - 200288 拉拉队长  若自己在萌化状态下再获得萌化会解除萌化。
 
@@ -30,27 +30,8 @@ class NutrientBubble(TraitHandler):
     desc = "获得增益时，额外获得层数+2。"
     implemented = True
 
-    def on_buff_gain(self, ctx):
-        # 自己获得增益（subject=获得 buff 的精灵）
-        if ctx.subject is not ctx.actor:
-            return
-        buff_type = ctx.extra.get("buff_type")
-        value = ctx.extra.get("value", 0)
-        if not buff_type or value == 0:
-            return
-        # 只有"增益"触发（特性自身的展示效果不是增益）；减益/中性不触发
-        if not B.is_buff(buff_type, value):
-            return
-        if not ctx.is_active():
-            return
-        B.grant_buff(ctx.actor, buff_type, 2, source_kind="trait")
-        ctx.add_state("triggers", 1)
-
-    def display(self, state, pet):
-        n = pet.trait_state.get("triggers", 0)
-        if n <= 0:
-            return None
-        return [{"name": "增益层数", "layers": n, "per": "2", "gain": True}]
+    def modify_buff_gain_layers(self, pet, buff_type, value):
+        return 2
 
 
 # ---------------- 200288 拉拉队长 ----------------

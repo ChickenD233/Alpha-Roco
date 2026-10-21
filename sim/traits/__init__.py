@@ -193,10 +193,19 @@ def on_turn_start(
 def describe(state: BattleState, pet: BattlePet) -> list:
     """当前精灵特性的显示行（供序列化，客户端 buff 区展示）。"""
     handler = get_handler(pet.trait_id)
-    if handler is None:
-        return []
-    result = handler.display(state, pet)
-    return list(result) if result else []
+    result = handler.display(state, pet) if handler is not None else None
+    effects = list(result) if result else []
+    immunity_names = {
+        "freeze_immune": "免疫冻结",
+        "burn_immune": "免疫灼烧",
+        "leech_immune": "免疫寄生",
+    }
+    for buff_type, name in immunity_names.items():
+        layers = sum(b.value for b in pet.buffs
+                     if b.buff_type == buff_type and b.source_kind == "trait")
+        if layers > 0:
+            effects.append({"name": name, "layers": layers, "per": "", "gain": True})
+    return effects
 
 
 def on_round_end(state: BattleState, order: list | None = None) -> None:

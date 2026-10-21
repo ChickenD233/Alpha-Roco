@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from ... import buffs as B
 from ... import marks as M
-from ...damage import calc_damage
+from ...damage import calc_damage, power_modifiers
 from ...data_loader import load_typechart
 from ...enums import Element as E
 from ...models import BattleSkill
@@ -80,13 +80,14 @@ class ThornSkin(TraitHandler):
         for _ in range(max(1, ctx.hit_count)):
             if attacker.hp <= 0:
                 break
+            percent, flat = power_modifiers(ctx.state, ctx.actor, attacker, skill)
             result = calc_damage(
                 ctx.actor,
                 attacker,
                 skill,
                 load_typechart(),
-                extra_power_percent=0.0,
-                extra_power_flat=0.0,
+                extra_power_percent=percent,
+                extra_power_flat=flat,
                 state=ctx.state,
             )
             dmg = result["damage"]
