@@ -203,7 +203,7 @@ def print_state(state):
         log(f"  印记 {pos_text} {neg_text}")
         for i, pet in enumerate(state["teams"][side]):
             marker = ">" if i == active_idx else " "
-            speed_text = str(pet["stats"]["speed"])
+            speed_text = "?"
             if side == MY_SIDE:
                 eff = pet.get("eff_speed")
                 if eff is not None:
@@ -668,7 +668,7 @@ def main():
             awaiting_replacement = False
             current_state = msg["state"]
             if current_state.get("winner"):
-                break
+                continue
             if current_state["active"]["A"] < 0 or current_state["active"]["B"] < 0:
                 continue
             if last_printed_turn != current_state["turn"]:
@@ -690,7 +690,10 @@ def main():
             else:
                 prompt_action(conn, current_state)
         elif msg_type == "game_over":
-            log(f"游戏结束，胜者：{msg['winner']}")
+            if msg["winner"] == "both_lose":
+                log("游戏结束，双方均失败")
+            else:
+                log(f"游戏结束，胜者：{msg['winner']}")
             break
 
     conn.close()

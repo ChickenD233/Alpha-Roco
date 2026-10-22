@@ -91,6 +91,7 @@ class BattlePet:
     # 去重——疾风连袭的重放集合按键过滤；"每使用1次X技能"类按次数读取；记录实时
     # 更新，含迅捷入场自动释放与巧变临时技能）
     used_skill_counts: dict = field(default_factory=dict)
+    revealed_skills: set = field(default_factory=set)
     # 上一次使用的技能 id（"若上次使用攻击技"类判定；聚能/换人不改变，
     # 疾风连袭的重放不算新的使用；力竭/离场后保留记录）
     last_used_skill_id: Optional[int] = None
@@ -122,7 +123,6 @@ class BattleState:
     teams: dict = field(default_factory=dict)
     active: dict = field(default_factory=lambda: {"A": 0, "B": 0})
     magic: dict = field(default_factory=lambda: {"A": 4, "B": 4})
-    revealed: dict = field(default_factory=lambda: {"A": set(), "B": set()})
     marks: dict = field(
         default_factory=lambda: {
             "A": {"positive": None, "negative": None},

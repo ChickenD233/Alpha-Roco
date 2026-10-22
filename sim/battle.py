@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import random
+from fractions import Fraction
 
 from . import (
     buffs,
@@ -53,7 +54,6 @@ def create_team_battle(
         teams={"A": team_a, "B": team_b},
         active=active,
         magic={"A": MAGIC_START, "B": MAGIC_START},
-        revealed={"A": set(), "B": set()},
         turn=1,
         log=[],
     )
@@ -66,6 +66,7 @@ def create_team_battle(
     # 须在特性 battle_start 之前绑定，以便特性仍可覆盖（bind 只写非默认值）。
     for side in ("A", "B"):
         for pet in state.teams[side]:
+            pet.revealed_skills.clear()
             for skill in pet.skills:
                 skills.bind_skill(skill, pet)
     # 战斗创建时先初始化需要预计算的技能运行时标记（如飓风共享技能的迅捷）。
@@ -205,16 +206,16 @@ def _apply_turn_limit(state: BattleState) -> None:
             f"达到{MAX_TURN + 1}回合，魔力值 {magic_a}:{magic_b}，{state.winner} 获胜"
         )
         return
-    hp_a = sum(pet.hp for pet in state.teams["A"])
-    hp_b = sum(pet.hp for pet in state.teams["B"])
+    hp_a = sum(Fraction(pet.hp, pet.max_hp) for pet in state.teams["A"] if pet.hp > 0)
+    hp_b = sum(Fraction(pet.hp, pet.max_hp) for pet in state.teams["B"] if pet.hp > 0)
     if hp_a != hp_b:
         state.winner = "A" if hp_a > hp_b else "B"
         state.log.append(
-            f"达到{MAX_TURN + 1}回合，剩余血量 {hp_a}:{hp_b}，{state.winner} 获胜"
+            f"达到{MAX_TURN + 1}回合，按存活精灵血量百分比总和判定，{state.winner} 获胜"
         )
         return
-    state.winner = "draw"
-    state.log.append(f"达到{MAX_TURN + 1}回合，魔力与剩余血量均相同，平局")
+    state.winner = "both_lose"
+    state.log.append(f"达到{MAX_TURN + 1}回合，魔力与存活精灵血量百分比总和均相同，双方均失败")
 
 
 def _skill_cost_after_bursts(
@@ -1129,7 +1130,7 @@ def _resolve_action(
                 state, pet, buffs.BuffType.SPATK, gained, side, pet.name
             )
     if skill.skill_id != -1:
-        state.revealed[side].add(skill.skill_id)
+        pet.revealed_skills.add(skill.skill_id)
         if not replay:
             # 使用记录（疾风连袭重放集合 / "每使用1次X技能"类的来源）：实时更新；
             # 重放是疾风连袭自身的效果，不算一次新的"使用"
@@ -2320,11 +2321,24 @@ def state_to_dict(state: BattleState, view_side: str | None = None) -> dict:
                                 ),
                             )["display_power"]
             if view_side is not None and side != view_side:
+                visible_skills = pet.skills
+                if pet.wish_original_skill is not None:
+                    visible_skills = [pet.wish_original_skill, *pet.skills[1:]]
+                d["skills"] = [
+                    {
+                        "name": skill.name,
+                        "energy_cost": skill.energy_cost,
+                        "element": skill.element,
+                    }
+                    for skill in visible_skills
+                    if skill.skill_id in pet.revealed_skills
+                ]
                 d["hp_percent"] = (
                     max(0, round(pet.hp / pet.max_hp * 100)) if pet.max_hp else 0
                 )
                 del d["hp"]
                 del d["max_hp"]
+                del d["stats"]
                 del d["skill_cooldowns"]
                 # 对方速度范围也显示真实范围（含 buff/印记/特性速度修正，如流沙统治者+50）
                 mark_speed_bonus = 0
@@ -2340,16 +2354,6 @@ def state_to_dict(state: BattleState, view_side: str | None = None) -> dict:
                 d["eff_speed_range"] = [
                     int((pet.speed_range[0] + flat) * (1.0 + percent * 0.1)),
                     int((pet.speed_range[1] + flat) * (1.0 + percent * 0.1)),
-                ]
-                revealed_ids = state.revealed[side]
-                d["skills"] = [
-                    {
-                        "name": skill["name"],
-                        "energy_cost": skill["energy_cost"],
-                        "element": skill.get("element"),  # 原始属性（不做特性改写）
-                    }
-                    for skill in d["skills"]
-                    if skill["skill_id"] in revealed_ids
                 ]
             side_list.append(d)
         teams[side] = side_list
