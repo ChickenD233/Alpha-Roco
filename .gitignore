@@ -2,6 +2,7 @@
 .cache/
 .vscode/
 logs/
+tests/
 scripts/
 __pycache__/
 :memory:.ses

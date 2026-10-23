@@ -12,13 +12,18 @@ Then run two clients:
 import argparse
 import json
 import os
+import random
 import socket
+import sys
+import time
 from pathlib import Path
+
+from sim.actions import enumerate_candidates, is_valid_action
 
 from sim.battle import (
     apply_drive,
-    can_use_skill,
     create_team_battle,
+    pet_to_dict,
     resume_after_leave,
     state_to_dict,
     step,
@@ -46,13 +51,112 @@ def recv_line(f):
 
 
 LOG_FILES = []
+MACHINE_MODE = False
 
 
 def log(msg):
-    print(msg)
+    print(msg, file=sys.stderr if MACHINE_MODE else sys.stdout)
     for f in LOG_FILES:
         f.write(str(msg) + "\n")
         f.flush()
+
+
+def send_decision(conn, state, side, phase, team, *, lead=False, opponent_team=None, own_pets=None):
+    candidates = (
+        [{"kind": "lead", "lead": index, "pet_index": index} for index in range(len(team))]
+        if lead
+        else enumerate_candidates(state, side, phase)
+    )
+    if not hasattr(send_decision, "phase"):
+        send_decision.phase = None
+        send_decision.group_id = -1
+        send_decision.sent_sides = set()
+        send_decision.sequence = 0
+        send_decision.event_logs = {}
+        send_decision.private_events = {}
+        send_decision.last_candidates = {}
+    if send_decision.phase != phase or side in send_decision.sent_sides:
+        send_decision.group_id += 1
+        send_decision.sent_sides = set()
+        send_decision.phase = phase
+    send_decision.sent_sides.add(side)
+    state_view = {"teams": {side: []}} if lead else state_to_dict(state, view_side=side)
+    public_state = None
+    if lead:
+        state_view = {"teams": {side: own_pets if own_pets is not None else []}}
+        state_view["turn"] = 0
+        state_view["winner"] = None
+        state_view["active"] = {"A": -1, "B": -1}
+        state_view["magic"] = {"A": 4, "B": 4}
+        state_view["log"] = []
+        public_state = {
+            "teams": {
+                side: state_view["teams"][side],
+                ("B" if side == "A" else "A"): [
+                    {"name": name} for name in opponent_team or []
+                ],
+            }
+        }
+        state_view["teams"]["B" if side == "A" else "A"] = public_state["teams"]["B" if side == "A" else "A"]
+        state_view["magic"] = {"A": 4, "B": 4}
+    event_log = send_decision.event_logs.get(side)
+    cursor = 0
+    if state is not None:
+        if event_log is None or event_log[0] is not state.log:
+            cursor = 0
+        else:
+            cursor = event_log[1]
+        events = [{"kind": "log", "phase": "unknown", "line": line} for line in state.log[cursor:]]
+        send_decision.event_logs[side] = (state.log, len(state.log))
+    else:
+        events = []
+    send_decision.last_candidates[side] = candidates
+    private_events = send_decision.private_events.pop(side, [])
+    payload = {
+        "type": "decision",
+        "request": {
+            "type": "decision",
+            "side": side,
+            "phase": phase,
+            "group_id": send_decision.group_id,
+            "sequence": send_decision.sequence,
+            "state": state_view,
+            "public_state": public_state if lead else None,
+            "team": team,
+            "opponent_team": opponent_team if lead else None,
+            "candidates": candidates,
+            "events": events,
+            "private_events": private_events,
+        },
+    }
+    send_decision.sequence += 1
+    send_line(conn, payload)
+
+
+def record_submission(side, action):
+    records = getattr(send_decision, "private_events", {})
+    candidates = getattr(send_decision, "last_candidates", {}).get(side, [])
+    submitted = next(
+        (
+            candidate
+            for candidate in candidates
+            if all(
+                candidate.get(key) == action.get(key)
+                for key in (
+                    "kind",
+                    "skill_index",
+                    "pet_index",
+                    "lead",
+                    "magic_id",
+                    "magic_branch",
+                    "choice_branch",
+                )
+            )
+        ),
+        action,
+    )
+    records.setdefault(side, []).append(dict(submitted))
+    send_decision.private_events = records
 
 
 def is_valid_switch(raw, state, side):
@@ -141,37 +245,6 @@ def read_leave_replacement(f, conn, state, side):
         )
 
 
-def is_valid_normal_switch(raw, state, side):
-    if raw is None or raw.get("kind") != "switch":
-        return True
-    idx = raw.get("pet_index")
-    if idx is None or state.active[side] < 0:
-        return False
-    team = state.teams[side]
-    if not (0 <= idx < len(team)):
-        return False
-    if idx == state.active[side]:
-        return False
-    return team[idx].hp > 0
-
-
-def is_valid_skill_energy(raw, state, side):
-    if raw is None or raw.get("kind") != "skill":
-        return True
-    idx = raw.get("skill_index")
-    if idx is None or state.active[side] < 0:
-        return False
-    team = state.teams[side]
-    pet = team[state.active[side]]
-    if not (0 <= idx < len(pet.skills)):
-        # 进化之力在本回合行动前生效，允许校验尚未出现在当前状态快照中的新增3个技能。
-        if raw.get("magic_id") == 1 and 0 <= idx < len(pet.skills) + 3:
-            return True
-        return False
-    skill = pet.skills[idx]
-    return can_use_skill(state, side, skill, skill_index=idx)
-
-
 def read_action_with_energy(f, conn, state, side):
     while True:
         raw = recv_line(f)
@@ -183,9 +256,7 @@ def read_action_with_energy(f, conn, state, side):
             "switch",
             "flee",
         ):
-            send_line(
-                conn, {"type": "error", "message": "必须显式提供有效行动类型 kind"}
-            )
+            send_line(conn, {"type": "error", "message": "必须显式提供有效行动类型 kind"})
             continue
         if raw["kind"] == "skill" and type(raw.get("skill_index")) is not int:
             send_line(
@@ -197,9 +268,7 @@ def read_action_with_energy(f, conn, state, side):
                 conn, {"type": "error", "message": "换人行动必须提供整数 pet_index"}
             )
             continue
-        if is_valid_skill_energy(raw, state, side) and is_valid_normal_switch(
-            raw, state, side
-        ):
+        if is_valid_action(state, side, raw):
             return raw
         send_line(conn, {"type": "error", "message": "行动不可用，请重新选择"})
 
@@ -227,10 +296,17 @@ def main():
     parser = argparse.ArgumentParser(description="Headless Roco 6v6 server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5000)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--log-dir")
+    parser.add_argument("--machine", action="store_true")
 
     args = parser.parse_args()
+    global MACHINE_MODE
+    MACHINE_MODE = args.machine
+    if args.seed is not None:
+        random.seed(args.seed)
 
-    logs_dir = Path(os.path.dirname(os.path.abspath(__file__))) / "logs" / "battle"
+    logs_dir = Path(args.log_dir) if args.log_dir else Path(os.path.dirname(os.path.abspath(__file__))) / "logs" / "battle"
     logs_dir.mkdir(parents=True, exist_ok=True)
     server_log = open(logs_dir / "server.log", "w", encoding="utf-8")
     LOG_FILES.extend([server_log])
@@ -241,7 +317,9 @@ def main():
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind((args.host, args.port))
     srv.listen(2)
-    log(f"server listening on {args.host}:{args.port}")
+    if MACHINE_MODE:
+        print(json.dumps({"type": "ready", "host": args.host, "port": srv.getsockname()[1]}), flush=True)
+    log(f"server listening on {args.host}:{srv.getsockname()[1]}")
 
     log("waiting for client A...")
     conn_a, addr_a = srv.accept()
@@ -279,12 +357,16 @@ def main():
     pets_a = make_team("A", team_a, spirits)
     pets_b = make_team("B", team_b, spirits)
 
-    send_line(
-        conn_a, {"type": "choose_lead", "opponent_team": [p.name for p in pets_b]}
-    )
-    send_line(
-        conn_b, {"type": "choose_lead", "opponent_team": [p.name for p in pets_a]}
-    )
+    if MACHINE_MODE:
+                send_decision(conn_a, None, "A", "lead", team_a, lead=True, opponent_team=[p.name for p in pets_b], own_pets=[pet_to_dict(pet) for pet in pets_a])
+                send_decision(conn_b, None, "B", "lead", team_b, lead=True, opponent_team=[p.name for p in pets_a], own_pets=[pet_to_dict(pet) for pet in pets_b])
+    else:
+        send_line(
+            conn_a, {"type": "choose_lead", "opponent_team": [p.name for p in pets_b]}
+        )
+        send_line(
+            conn_b, {"type": "choose_lead", "opponent_team": [p.name for p in pets_a]}
+        )
     raw_lead_a = recv_line(f_a)
     raw_lead_b = recv_line(f_b)
     lead_a = raw_lead_a.get("lead", 0) if raw_lead_a else 0
@@ -302,11 +384,15 @@ def main():
         replaced = False
         for side, conn, f in (("A", conn_a, f_a), ("B", conn_b, f_b)):
             if state.active[side] < 0:
-                send_line(conn, {"type": "choose_replacement"})
+                if MACHINE_MODE:
+                    send_decision(conn, state, side, "replacement", team_a if side == "A" else team_b)
+                else:
+                    send_line(conn, {"type": "choose_replacement"})
                 raw = read_replacement(f, conn, state, side)
                 if raw is None:
                     log("client disconnected")
                     break
+                record_submission(side, raw)
                 replaced = True
         else:
             if replaced:
@@ -322,12 +408,17 @@ def main():
                 send_line(conn_b, payload_b)
 
             log(f"\n--- turn {state.turn} waiting actions ---")
+            if MACHINE_MODE:
+                send_decision(conn_a, state, "A", "action", team_a)
+                send_decision(conn_b, state, "B", "action", team_b)
             raw_a = read_action_with_energy(f_a, conn_a, state, "A")
             raw_b = read_action_with_energy(f_b, conn_b, state, "B")
             if raw_a is None or raw_b is None:
                 log("client disconnected")
                 break
 
+            record_submission("A", raw_a)
+            record_submission("B", raw_b)
             action_a = Action(
                 kind=raw_a["kind"],
                 skill_index=raw_a.get("skill_index"),
@@ -354,11 +445,15 @@ def main():
             while state.paused_turn is not None and state.winner is None:
                 lside = state.paused_turn["leave_side"]
                 lconn, lf = (conn_a, f_a) if lside == "A" else (conn_b, f_b)
-                send_line(lconn, {"type": "choose_replacement"})
+                if MACHINE_MODE:
+                    send_decision(lconn, state, lside, "replacement", team_a if lside == "A" else team_b)
+                else:
+                    send_line(lconn, {"type": "choose_replacement"})
                 raw = read_leave_replacement(lf, lconn, state, lside)
                 if raw is None:
                     log("client disconnected")
                     break
+                record_submission(lside, raw)
                 incoming = state.teams[lside][raw["pet_index"]]
                 before = len(state.log)
                 state = resume_after_leave(state, lside, incoming)
@@ -370,11 +465,15 @@ def main():
             for side, conn, f in (("A", conn_a, f_a), ("B", conn_b, f_b)):
                 if state.pending_switch[side]:
                     state.pending_switch[side] = False
-                    send_line(conn, {"type": "choose_replacement"})
+                    if MACHINE_MODE:
+                        send_decision(conn, state, side, "replacement", team_a if side == "A" else team_b)
+                    else:
+                        send_line(conn, {"type": "choose_replacement"})
                     raw = read_trait_replacement(f, conn, state, side)
                     if raw is None:
                         log("client disconnected")
                         break
+                    record_submission(side, raw)
                     trait_switched = True
             else:
                 payload_a = {

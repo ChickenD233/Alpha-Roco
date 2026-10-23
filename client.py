@@ -10,6 +10,7 @@ import json
 import os
 import random
 import socket
+import sys
 from pathlib import Path
 
 from sim.data_loader import validate_team_config
@@ -28,6 +29,7 @@ def read_line(f):
 
 LOG_FILES = []
 AUTO_MODE = False
+MACHINE_MODE = False
 MY_SIDE = None
 
 # 元素 0-17 名称（与 sim/enums.Element 一致）
@@ -139,8 +141,21 @@ def buff_info():
     return _BUFF_INFO
 
 
+def terminal_input(prompt=""):
+    if MACHINE_MODE:
+        print(prompt, file=sys.stderr, end="", flush=True)
+        return input()
+    return input(prompt)
+
+
+def terminal_print(*args, **kwargs):
+    if MACHINE_MODE:
+        kwargs["file"] = sys.stderr
+    print(*args, **kwargs)
+
+
 def log(msg):
-    print(msg)
+    print(msg, file=sys.stderr if MACHINE_MODE else sys.stdout)
     for f in LOG_FILES:
         f.write(str(msg) + "\n")
         f.flush()
@@ -178,7 +193,7 @@ def choose_lead(team, opponent_team):
     for i, cfg in enumerate(team):
         log(f"  {i + 1}: {cfg['spirit']}")
     while True:
-        value = input("请输入首发编号 (1-6): ").strip()
+        value = terminal_input("请输入首发编号 (1-6): ").strip()
         if value.isdigit() and 1 <= int(value) <= len(team):
             return int(value) - 1
         log("无效编号，请重新输入")
@@ -385,14 +400,14 @@ def choose_lord_branch(state):
             branches.append(b["name"])
     if not branches:
         return 0
-    print("可选择的首领形态：")
+    terminal_print("可选择的首领形态：")
     for i, name in enumerate(branches):
-        print(f"  {i + 1}: {name}")
+        terminal_print(f"  {i + 1}: {name}")
     while True:
-        value = input("请输入编号: ").strip()
+        value = terminal_input("请输入编号: ").strip()
         if value.isdigit() and 1 <= int(value) <= len(branches):
             return int(value) - 1
-        print("无效编号")
+        terminal_print("无效编号")
 
 
 def choose_branch(skill):
@@ -402,14 +417,14 @@ def choose_branch(skill):
     直接回车返回 None，表示返回去改选其他技能。
     """
     while True:
-        value = input(
+        value = terminal_input(
             f"选择 {skill.get('name', '技能')} 的效果 (0=明, 1=暗, 回车=返回): "
         ).strip()
         if value == "":
             return None
         if value in ("0", "1"):
             return int(value)
-        print("无效选择，请输入 0/1 或直接回车返回")
+        terminal_print("无效选择，请输入 0/1 或直接回车返回")
 
 
 def prompt_action(conn, state):
@@ -420,7 +435,7 @@ def prompt_action(conn, state):
         skill_limit = min(
             7, len(current_pet.get("skills", [])) + (3 if magic_id == 1 else 0)
         )
-        action = input(
+        action = terminal_input(
             f"输入 (W1=共鸣, X=聚能, 1-{skill_limit}=技能, E<0-9>=换人, esc=逃跑): "
         ).strip()
         lower = action.lower()
@@ -456,11 +471,18 @@ def prompt_action(conn, state):
             # 进化之力追加的技能尚未出现在本地快照中，冷却检查交由服务端/引擎处理。
             if idx < len(pet["skills"]):
                 skill = pet["skills"][idx]
-                if skill.get("skill_id") in pet.get("skill_cooldowns", []):
+                if (
+                    skill.get("skill_id") in pet.get("skill_cooldowns", [])
+                    and not (magic_id == 0 and idx == 0)
+                ):
                     log(f"技能冷却中：{skill['name']}")
                     continue
             choice_branch = 0
-            if idx < len(pet["skills"]) and pet["skills"][idx].get("choice"):
+            if (
+                idx < len(pet["skills"])
+                and pet["skills"][idx].get("choice")
+                and not (magic_id == 0 and idx == 0)
+            ):
                 branch = choose_branch(pet["skills"][idx])
                 if branch is None:
                     # 玩家在选择效果时返回，改选其他技能。
@@ -512,7 +534,7 @@ def prompt_action(conn, state):
 
 def prompt_replacement(conn, state):
     while True:
-        action = input("选择上场的精灵 (E <0-9>): ").strip()
+        action = terminal_input("选择上场的精灵 (E <0-9>): ").strip()
         lower = action.lower()
         if lower.startswith("e"):
             idx_text = action[1:].strip()
@@ -593,6 +615,8 @@ def main():
     parser.add_argument("--port", type=int, default=5000)
     parser.add_argument("--nature", type=int, default=-1)
     parser.add_argument("--auto", action="store_true")
+    parser.add_argument("--machine", action="store_true")
+    parser.add_argument("--log-dir")
     parser.add_argument(
         "--team", help="必须指定队伍文件路径或 data/teams 下的名字（如 冻陨2.0）"
     )
@@ -602,8 +626,9 @@ def main():
             "必须通过 --team 指定队伍文件，例如 --team data/teams/冻陨2.0.json"
         )
     # random.seed(42)
-    global AUTO_MODE
+    global AUTO_MODE, MACHINE_MODE
     AUTO_MODE = args.auto
+    MACHINE_MODE = args.machine
     team_data = load_team(args.team)
     team = team_data.get("team")
     resonance = team_data.get("resonance")
@@ -627,13 +652,20 @@ def main():
             global MY_SIDE
             MY_SIDE = side
             my_side = side
+            if args.machine:
+                print(json.dumps({"type": "welcome", "side": side}), flush=True)
             logs_dir = (
-                Path(os.path.dirname(os.path.abspath(__file__))) / "logs" / "battle"
+                Path(args.log_dir)
+                if args.log_dir
+                else Path(os.path.dirname(os.path.abspath(__file__))) / "logs" / "battle"
             )
-            logs_dir.mkdir(parents=True, exist_ok=True)
-            log_name = "clientA.log" if side == "A" else "clientB.log"
-            client_log = open(logs_dir / log_name, "w", encoding="utf-8")
-            LOG_FILES.extend([client_log])
+            if args.machine and args.log_dir is None:
+                logs_dir = None
+            if logs_dir is not None:
+                logs_dir.mkdir(parents=True, exist_ok=True)
+                log_name = "clientA.log" if side == "A" else "clientB.log"
+                client_log = (logs_dir / log_name).open("w", encoding="utf-8")
+                LOG_FILES.append(client_log)
 
             log(f"你是 {side} 方")
             if team is None:
@@ -658,6 +690,26 @@ def main():
             else:
                 lead = choose_lead(team, opponent_team)
             send_line(conn, {"type": "lead", "lead": lead})
+        elif msg_type == "decision":
+            request = msg["request"]
+            if args.machine:
+                print(json.dumps({"type": "decision", "request": request}, ensure_ascii=False), flush=True)
+            my_side = request["side"]
+            MY_SIDE = my_side
+            current_state = request["state"]
+            team = request["team"]
+            if request["phase"] == "lead":
+                lead_line = terminal_input("选择首发编号 (1-based): ").strip()
+                send_line(conn, {"lead": int(lead_line) - 1})
+            elif request["phase"] == "replacement":
+                awaiting_replacement = True
+                prompt_replacement(conn, current_state)
+            else:
+                awaiting_replacement = False
+                if last_printed_turn != current_state["turn"]:
+                    print_state(current_state)
+                    last_printed_turn = current_state["turn"]
+                prompt_action(conn, current_state)
         elif msg_type == "choose_replacement":
             awaiting_replacement = True
             if args.auto and current_state is not None:
@@ -667,6 +719,8 @@ def main():
         elif msg_type == "state":
             awaiting_replacement = False
             current_state = msg["state"]
+            if args.machine:
+                continue
             if current_state.get("winner"):
                 continue
             if current_state["active"]["A"] < 0 or current_state["active"]["B"] < 0:
@@ -679,6 +733,9 @@ def main():
             else:
                 prompt_action(conn, current_state)
         elif msg_type == "error":
+            if args.machine:
+                print(json.dumps({"type": "protocol_error", "side": my_side, "message": msg.get("message", "操作无效")}), flush=True)
+                break
             log(msg.get("message", "操作无效，请重新输入"))
             if args.auto:
                 if awaiting_replacement and current_state is not None:
@@ -690,10 +747,12 @@ def main():
             else:
                 prompt_action(conn, current_state)
         elif msg_type == "game_over":
+            if args.machine:
+                print(json.dumps({"type": "game_over", "winner": msg["winner"]}), flush=True)
             if msg["winner"] == "both_lose":
                 log("游戏结束，双方均失败")
             else:
-                log(f"游戏结束，胜者：{msg['winner']}")
+                log(f"游戏结束，胜者：{msg['winner']}" )
             break
 
     conn.close()
