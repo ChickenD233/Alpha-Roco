@@ -75,6 +75,7 @@ class BattlePet:
         0  # 最近一次入场的回合（返场免疫判定：本回合入场的精灵免疫返场效果）
     )
     light_heal_rounds: int = 0  # 光合治愈持续回合数（回合结束回复）
+    pending_dizzy: int = 0  # 下回合开始时施加的眩晕层数（"下回合获得眩晕"类，B35）
     windup_skill: Optional[BattleSkill] = None  # 当前正在蓄力的技能
     cute_history: list[int] = field(default_factory=list)  # 每次萌化前的精灵形态 ID，恢复时后进先出
     # 技能侧免死（血气"应对攻击：本回合受到致命伤害时，保留1生命值"）：

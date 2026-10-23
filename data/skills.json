@@ -61,7 +61,7 @@
       "energyCost": 3,
       "power": 90,
       "desc": "造成物伤。每次使用后，本技能威力永久+45。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -83,7 +83,7 @@
       "energyCost": 7,
       "power": 135,
       "desc": "造成物伤，回合结束时，本技能能耗永久-1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -127,7 +127,7 @@
       "energyCost": 2,
       "power": 30,
       "desc": "造成物伤，2连击，应对状态：本次技能连击数翻倍。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -182,7 +182,7 @@
       "energyCost": 2,
       "power": 40,
       "desc": "造成物伤，1连击，每次使用后，本技能连击数永久+1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -237,7 +237,7 @@
       "energyCost": 4,
       "power": 80,
       "desc": "造成物伤，自己每失去5%生命，本次技能威力+5。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -248,7 +248,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，每应对成功1次，本技能威力永久+90。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -688,7 +688,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，若敌方本回合更换精灵，本次技能威力+100。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -842,7 +842,7 @@
       "energyCost": 1,
       "power": 55,
       "desc": "造成物伤，本技能能耗每+1，威力+50。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1172,7 +1172,7 @@
       "energyCost": 3,
       "power": 30,
       "desc": "造成物伤，2连击，每次使用后，本技能连击数永久+2。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1260,7 +1260,7 @@
       "energyCost": 4,
       "power": 90,
       "desc": "造成物伤，应对状态：自己回复50%生命和5能量。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1304,7 +1304,7 @@
       "energyCost": 5,
       "power": 85,
       "desc": "造成物伤，自己回复20%生命。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1326,7 +1326,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，若敌方本回合更换精灵，自己回复7点能量。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1722,7 +1722,7 @@
       "energyCost": 3,
       "power": 70,
       "desc": "造成物伤，敌方获得4层灼烧。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1744,7 +1744,7 @@
       "energyCost": 5,
       "power": 180,
       "desc": "造成高额物理伤害，自己下回合获得眩晕。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2844,7 +2844,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，敌方获得连击数-3。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2932,7 +2932,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，若敌方本回合更换精灵，自己获得物防+100%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2965,7 +2965,7 @@
       "energyCost": 4,
       "power": 90,
       "desc": "造成物伤，敌方获得全技能能耗+1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3119,7 +3119,7 @@
       "energyCost": 3,
       "power": 55,
       "desc": "造成物伤，敌方获得2层冻结，应对状态：额外获得2层，本次技能威力翻倍。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3130,7 +3130,7 @@
       "energyCost": 3,
       "power": 90,
       "desc": "造成物伤，敌方获得速度-30。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3262,7 +3262,7 @@
       "energyCost": 4,
       "power": 95,
       "desc": "造成物伤，敌方每有1层冻结，自己回复1能量。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
