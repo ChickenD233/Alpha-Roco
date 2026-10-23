@@ -23,6 +23,8 @@ def main():
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--timeout", type=float, default=20)
+    parser.add_argument("--log-dir", type=Path)
+    parser.add_argument("--log-jsonl", type=Path)
     args = parser.parse_args()
     if args.checkpoint and args.random_init:
         parser.error("--checkpoint与--random-init不能同时使用")
@@ -46,6 +48,8 @@ def main():
         team_b=args.team_b,
         seed=args.seed,
         timeout=args.timeout,
+        log_dir=args.log_dir,
+        log_jsonl=args.log_jsonl,
     ) as session:
         while session.winner is None:
             for request in session.requests():
