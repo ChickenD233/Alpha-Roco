@@ -37,12 +37,14 @@ from ..ops import (
     EnemySwitchedThisTurn,
     GainEnergy,
     Heal,
+    IsCounter,
     KilledTarget,
     LeaveField,
     LoseEnergy,
     LoseHp,
     Not,
     OpsSkill,
+    Repeat,
     SkillGrowth,
     SlotIn,
     UsedAttackSkillLastTurn,
@@ -380,8 +382,184 @@ for _handler in (
     HitDebuffAttack(7090270, "滚雪球", 0, buffs.BuffType.FREEZE, 2,
                     counter_value=2, counter_power_mult=2),
     HitDebuffAttack(7090280, "丢冰块", 0, buffs.BuffType.SPEED, -3),
+    HitDebuffAttack(7110450, "通电", 0, buffs.BuffType.LIGHTNING, 1),
+    HitDebuffAttack(7120060, "毒针", 0, buffs.BuffType.POISON, 1),
+    HitDebuffAttack(7130300, "网缚", 0, buffs.BuffType.DEF, -3),
 ):
     register(_handler)
+
+
+# ---------------- 天气加成攻击 ----------------
+class WeatherAttack(OpsSkill):
+    """造成伤害；指定天气下追加本次威力或能耗修正。
+
+    天气在伤害计算与付费时实时读取（不是选择技能时的天气）。power_percent
+    为威力百分比增量（"威力+50%" = 50），energy_delta 为能耗增量（"能耗-2"
+    = -2）。新增同类技能只在下表加一行。
+    """
+
+    def __init__(self, skill_id, name, category, weather_id,
+                 power_percent=0.0, energy_delta=0, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.weather_id = weather_id
+        self.weather_power = power_percent
+        self.weather_energy = energy_delta
+        self.implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.weather == self.weather_id:
+            percent += self.weather_power
+        return (percent, flat)
+
+    def modify_energy_cost(self, ctx):
+        delta = super().modify_energy_cost(ctx)
+        if ctx.weather == self.weather_id:
+            delta += self.weather_energy
+        return delta
+
+
+for _handler in (
+    WeatherAttack(7050490, "沉溺", 0, weather.RAIN, energy_delta=-2),
+    WeatherAttack(7090460, "雪原狩猎", 0, weather.BLIZZARD, power_percent=50),
+):
+    register(_handler)
+
+
+# ---------------- 先手加成攻击 ----------------
+class FirstStrikeAttack(OpsSkill):
+    """造成伤害；先于敌方行动时追加威力或连击。
+
+    先手判定用排序期给出的 ``ctx.is_first``。forced_hits 非空时按"改为 N 连击"
+    覆盖连击数（与追打同口径），否则只加威力百分比。
+    """
+
+    def __init__(self, skill_id, name, category, power_percent=0.0,
+                 forced_hits=None, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.first_power = power_percent
+        self.first_hits = forced_hits
+        self.implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.is_first:
+            percent += self.first_power
+        return (percent, flat)
+
+    def modify_hit_count(self, ctx):
+        flat, percent, forced = super().modify_hit_count(ctx)
+        if ctx.is_first and self.first_hits is not None:
+            return (flat, percent, self.first_hits)
+        return (flat, percent, forced)
+
+
+for _handler in (
+    FirstStrikeAttack(7150060, "扇风", 0, power_percent=50),
+    FirstStrikeAttack(7150090, "疾风刺", 0, forced_hits=3),
+):
+    register(_handler)
+
+
+# ---------------- 吸血攻击（应对时追加） ----------------
+class LifestealStrike(OpsSkill):
+    """造成伤害并吸血；应对状态成功时提高吸血或威力。
+
+    lifesteal 为常驻吸血比例（0.5 = 50%）；counter_lifesteal 与
+    counter_power_percent 只在应对成功时叠加。
+    """
+
+    def __init__(self, skill_id, name, category, lifesteal=0.0,
+                 counter_lifesteal=0.0, counter_power_percent=0.0, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.lifesteal = lifesteal
+        self.counter_lifesteal = counter_lifesteal
+        self.counter_power = counter_power_percent
+        self.counter_target = COUNTER_STATUS
+        self.implemented = True
+
+    def modify_lifesteal(self, ctx):
+        total = super().modify_lifesteal(ctx)
+        if ctx.is_counter:
+            total += self.counter_lifesteal
+        return total
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.is_counter:
+            percent += self.counter_power
+        return (percent, flat)
+
+
+for _handler in (
+    LifestealStrike(7180100, "撕裂", 0, counter_lifesteal=1.0),
+    LifestealStrike(7180120, "暗突袭", 0, lifesteal=0.5, counter_power_percent=100),
+):
+    register(_handler)
+
+
+# ---------------- 中毒攻击（应对时改为高层的） ----------------
+class PoisonBurst(OpsSkill):
+    """造成物伤；命中使敌方获得中毒，应对状态成功时改为更高层数。
+
+    "改为"表示两档互斥：应对成功时只给 counter_layers，不再叠加命中那档；
+    应对奖励按 B38 在回合末结算，命中阶段因此用 ``When(Not(condition=IsCounter()))`` 拦掉。
+    """
+
+    def __init__(self, skill_id, name, category, layers, counter_layers, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.counter_target = COUNTER_STATUS
+        self.hit_effects = (
+            When(condition=Not(condition=IsCounter()),
+                 effects=(ApplyBuff(buff_type=buffs.BuffType.POISON,
+                                    value=layers, target=ENEMY),)),
+        )
+        self.counter_effects = (
+            ApplyBuff(buff_type=buffs.BuffType.POISON, value=counter_layers,
+                      target=ENEMY),
+        )
+        self.implemented = True
+
+
+register(PoisonBurst(7120090, "毒囊", 0, 2, 6))
+
+
+# ---------------- 自损/自增益攻击 ----------------
+class RecoilStrike(OpsSkill):
+    """造成物伤；自己获得物攻减益，应对状态成功时改为等量增益。
+
+    "改为"同毒囊：命中阶段只在非应对时施加减益，应对奖励在回合末给增益。
+    """
+
+    def __init__(self, skill_id, name, category, layers=5, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.counter_target = COUNTER_STATUS
+        self.hit_effects = (
+            When(condition=Not(condition=IsCounter()),
+                 effects=(ApplyBuff(buff_type=buffs.BuffType.ATK, value=-layers),)),
+        )
+        self.counter_effects = (
+            ApplyBuff(buff_type=buffs.BuffType.ATK, value=layers),
+        )
+        self.implemented = True
+
+
+register(RecoilStrike(7180290, "跌落", 0, 5))
 
 
 # ---------------- 7060270 色散 ----------------
@@ -645,6 +823,8 @@ class AttackAndLeave(OpsSkill):
 
 
 for _handler in (
+    # 无连击 · 物攻
+    AttackAndLeave(7060290, "闪光弹", 0),
     # 无连击 · 魔攻
     AttackAndLeave(7040240, "高温回火", 1),
     # 连击 · 物攻
@@ -1522,6 +1702,127 @@ class Condense(OpsSkill):
 register(Condense())
 
 
+# 7080140 岩土暴击
+class RockCrit(OpsSkill):
+    """造成高额物伤；每被攻击 1 次，本技能能耗永久 -1。
+
+    地系（element 5）物攻，威力 140、能耗 8。受击广播按**攻击次数**计
+    （一次多段攻击只广播一次），成长经 ``SkillGrowth`` 写入能耗修正。
+    """
+
+    skill_id = 7080140
+    name = "岩土暴击"
+    category = 0
+    implemented = True
+
+    def on_take_damage(self, ctx):
+        SkillGrowth(field=GROWTH_ENERGY_COST, delta=-1).apply(ctx)
+
+
+register(RockCrit())
+
+
+# 7080160 裂石
+class RockSplit(OpsSkill):
+    """造成物伤；应对状态成功时使敌方获得物防 -80%。
+
+    地系（element 5）物攻，威力 95、能耗 3。物防 -80% = -8 层。
+    """
+
+    skill_id = 7080160
+    name = "裂石"
+    category = 0
+    counter_target = COUNTER_STATUS
+    implemented = True
+    counter_effects = (
+        ApplyBuff(buff_type=buffs.BuffType.DEF, value=-8, target=ENEMY),
+    )
+
+
+register(RockSplit())
+
+
+# 7110180 电弧
+class ArcBurst(OpsSkill):
+    """造成物伤；入场后首次行动威力 +40（迸发）。
+
+    电系（element 8）物攻，威力 80、能耗 3。与天旋地转同一判定：
+    ``has_acted_since_entry`` 为 False 时加成。
+    """
+
+    skill_id = 7110180
+    name = "电弧"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if not ctx.actor.has_acted_since_entry:
+            flat += 40
+        return (percent, flat)
+
+
+register(ArcBurst())
+
+
+# 7140060 崩拳
+class BreakingFist(OpsSkill):
+    """造成物伤；应对状态成功时自己获得物攻 +100%。
+
+    武系（element 11）物攻，威力 65、能耗 2。物攻 +100% = 10 层。
+    """
+
+    skill_id = 7140060
+    name = "崩拳"
+    category = 0
+    counter_target = COUNTER_STATUS
+    implemented = True
+    counter_effects = (ApplyBuff(buff_type=buffs.BuffType.ATK, value=10),)
+
+
+register(BreakingFist())
+
+
+# 7140360 回旋踢
+class SpinKick(OpsSkill):
+    """造成物伤；若敌方本回合更换精灵，本次技能威力翻倍。
+
+    武系（element 11）物攻，威力 80、能耗 3。"翻倍"按增量折算为 +100%
+    （P11），条件复用 ``EnemySwitchedThisTurn``。
+    """
+
+    skill_id = 7140360
+    name = "回旋踢"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if EnemySwitchedThisTurn().test(ctx):
+            percent += 100
+        return (percent, flat)
+
+
+register(SpinKick())
+
+
+# 7150390 俯冲
+class Dive(OpsSkill):
+    """造成物伤，先手 +1。
+
+    翼系（element 7）物攻，威力 105、能耗 7。先手是技能侧静态增量。
+    """
+
+    skill_id = 7150390
+    name = "俯冲"
+    category = 0
+    priority_delta = 1
+    implemented = True
+
+
+register(Dive())
+
+
 # ---------------- 无连击 · 魔攻 ----------------
 
 
@@ -2188,6 +2489,54 @@ class DoubleClaw(OpsSkill):
 
 
 register(DoubleClaw())
+
+
+# 7140070 散手
+class Flurry(OpsSkill):
+    """造成物伤，2 连击；应对状态成功时改为 6 连击。
+
+    武系（element 11）物攻，威力 35、能耗 3。"改为"按强制值覆盖（与追打
+    "变为3连击"同口径），连击数在伤害计算时即时判定。
+    """
+
+    skill_id = 7140070
+    name = "散手"
+    category = 0
+    counter_target = COUNTER_STATUS
+    hit_count_flat = 1
+    implemented = True
+
+    def modify_hit_count(self, ctx):
+        flat, percent, forced = super().modify_hit_count(ctx)
+        if ctx.is_counter:
+            return (flat, percent, 6)
+        return (flat, percent, forced)
+
+
+register(Flurry())
+
+
+# 7120080 连续毒针
+class PoisonNeedles(OpsSkill):
+    """造成物伤，2 连击；每次连击使敌方获得 1 层中毒。
+
+    毒系（element 9）物攻，威力 15、能耗 2。按实际连击数逐次施加，
+    每次独立触发获得事件（B28 / S28 的重复语义）。
+    """
+
+    skill_id = 7120080
+    name = "连续毒针"
+    category = 0
+    hit_count_flat = 1
+    implemented = True
+    hit_effects = (
+        Repeat(count=lambda ctx: ctx.hit_count,
+               effects=(ApplyBuff(buff_type=buffs.BuffType.POISON, value=1,
+                                  target=ENEMY),)),
+    )
+
+
+register(PoisonNeedles())
 
 
 # ---------------- 连击 · 魔攻 ----------------

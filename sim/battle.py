@@ -1364,6 +1364,7 @@ def _resolve_action(
                         skill,
                         skill_index=action.skill_index,
                         choice_branch=action.choice_branch,
+                        is_counter=is_counter,
                     )
                 )
                 if lifesteal > 0:
@@ -2005,6 +2006,8 @@ def step(state: BattleState, action_a: Action, action_b: Action) -> BattleState:
             first, second = "B", "A"
         else:
             first, second = ("A", "B") if random.random() < 0.5 else ("B", "A")
+
+    state.last_order = [first, second]
 
     # 打断（"应对成功：打断被应对技能"）：应对判定成功时**立即**作废被应对方本次
     # 声明，不结算（不走 B38 的回合末从句）。被应对方是后手方（应对强制先手）；
