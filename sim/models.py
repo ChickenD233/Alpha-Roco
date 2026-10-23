@@ -154,6 +154,8 @@ class BattleState:
     turn: int = 0
     log: list = field(default_factory=list)
     winner: Optional[str] = None
+    # 本回合行动顺序（先手方、后手方）；未进入行动结算时为空
+    last_order: list = field(default_factory=list)
     entry_done: bool = False
     # 特性请求的换人（如警惕：回合结束能量为0时脱离）——服务端发 choose_replacement 由玩家选人
     pending_switch: dict = field(default_factory=lambda: {"A": False, "B": False})

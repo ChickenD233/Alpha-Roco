@@ -2074,7 +2074,7 @@
       "energyCost": 4,
       "power": 110,
       "desc": "造成物伤，天气为雨天时，本技能能耗-2。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2624,7 +2624,7 @@
       "energyCost": 8,
       "power": 140,
       "desc": "造成物伤，每被攻击1次。本技能能耗永久-1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2646,7 +2646,7 @@
       "energyCost": 3,
       "power": 95,
       "desc": "造成物伤，应对状态：敌方获得物防-80%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3295,7 +3295,7 @@
       "energyCost": 3,
       "power": 85,
       "desc": "造成物伤，天气为暴风雪时，本次技能威力+50。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3515,7 +3515,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，迸发：本次技能威力+40。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3790,7 +3790,7 @@
       "energyCost": 3,
       "power": 75,
       "desc": "造成物伤，敌方获得1层引电。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3812,7 +3812,7 @@
       "energyCost": 0,
       "power": 20,
       "desc": "造成物伤，敌方获得1层中毒。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3834,7 +3834,7 @@
       "energyCost": 2,
       "power": 15,
       "desc": "造成物伤，2连击，每次连击使敌方获得1层中毒。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3845,7 +3845,7 @@
       "energyCost": 2,
       "power": 25,
       "desc": "造成物伤，敌方获得2层中毒，应对状态：改为获得6层。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4285,7 +4285,7 @@
       "energyCost": 2,
       "power": 60,
       "desc": "造成物伤，敌方获得物防-30%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4362,7 +4362,7 @@
       "energyCost": 2,
       "power": 65,
       "desc": "造成物伤，应对状态：自己获得物攻+100%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4373,7 +4373,7 @@
       "energyCost": 3,
       "power": 35,
       "desc": "造成物伤，2连击，应对状态：本技能改为6连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4637,7 +4637,7 @@
       "energyCost": 3,
       "power": 80,
       "desc": "造成物伤，若敌方本回合更换精灵，本次技能威力翻倍。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4659,7 +4659,7 @@
       "energyCost": 3,
       "power": 75,
       "desc": "造成物伤，若先于敌方攻击，本次技能威力+50%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4681,7 +4681,7 @@
       "energyCost": 2,
       "power": 25,
       "desc": "造成物伤，1连击，若先于敌方攻击，改为3连击。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4934,7 +4934,7 @@
       "energyCost": 7,
       "power": 105,
       "desc": "造成物伤，先手+1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5484,7 +5484,7 @@
       "energyCost": 3,
       "power": 85,
       "desc": "造成物伤，应对状态：本次攻击吸血100%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5506,7 +5506,7 @@
       "energyCost": 4,
       "power": 70,
       "desc": "造成物伤，吸血50%，应对状态：本次技能威力翻倍。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5682,7 +5682,7 @@
       "energyCost": 3,
       "power": 120,
       "desc": "造成大量物伤，自己获得物攻-50%，应对状态：改为获得物攻+50%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6166,7 +6166,7 @@
       "energyCost": 2,
       "power": 40,
       "desc": "造成物伤，自己脱离。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
