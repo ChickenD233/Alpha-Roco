@@ -1887,6 +1887,15 @@ def step(state: BattleState, action_a: Action, action_b: Action) -> BattleState:
 
     # 战斗开始为首发精灵补发入场事件；随后广播回合开始事件（双方行动已选定）
     traits.ensure_entry(state)
+    # "下回合获得眩晕"类：上一回合登记，本回合开始时施加（SPEC B35）。
+    for team in state.teams.values():
+        for pet in team:
+            if pet.pending_dizzy:
+                buffs.grant_buff(
+                    pet, buffs.BuffType.DIZZY, pet.pending_dizzy,
+                    buffs.DurationKind.NORMAL, state.turn,
+                )
+                pet.pending_dizzy = 0
     traits.on_turn_start(state, action_a, action_b)
 
     for team in state.teams.values():

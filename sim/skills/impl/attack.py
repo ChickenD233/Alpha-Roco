@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from ... import buffs, traits, weather
+from ... import buffs, skill_utils, traits, weather
 from ...data_loader import build_skill_map, skill_group_ids
 from ...evolution import can_cute
 from ..ops import (
@@ -214,6 +214,172 @@ for _handler in (
     PureAttack(7170210, "午夜噪音", 1, hits=5),
     PureAttack(7180260, "黑手", 1, hits=2),
     PureAttack(7190380, "针状物", 1, hits=3),
+):
+    register(_handler)
+
+
+# ---------------- 永久成长攻击 ----------------
+class GrowthAttack(OpsSkill):
+    """造成伤害 + 本技能永久成长（威力 / 连击 / 能耗）。
+
+    成长统一经 ``SkillGrowth`` 写入 ``skill_state``，再由 ``modify_power`` /
+    ``modify_hit_count`` / ``modify_energy_cost`` 读出，因此成长值同时参与
+    伤害、显示与付费。trigger 决定成长时机：
+
+    - ``after_use``：使用后立即成长（"每次使用后…"）；
+    - ``round_end``：回合结束时成长（"回合结束时…"），**只在本回合确实使用过
+      本技能时成立**——聚能、换人、眩晕都不算使用，不得因此减费；
+    - ``counter``：应对成功时成长（"每应对成功1次…"）。此触发要求描述自带
+      应对类别；只写"每应对成功1次"而没有类别的按特性式累计处理，见
+      ``EnergyEdge``。
+
+    hits 为固有连击数。新增同类技能只在下表加一行。
+    """
+
+    def __init__(self, skill_id, name, category, field, delta,
+                 trigger="after_use", hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.trigger = trigger
+        self.implemented = True
+        growth = (SkillGrowth(field=field, delta=delta),)
+        if trigger == "counter":
+            self.counter_target = COUNTER_STATUS
+            self.counter_effects = growth
+        elif trigger == "round_end":
+            self.round_end_effects = growth
+        else:
+            self.after_use_effects = growth
+
+    def on_after_use(self, ctx):
+        if self.trigger == "round_end":
+            ctx.set_state("used_turn", ctx.state.turn)
+        super().on_after_use(ctx)
+
+    def on_round_end(self, ctx):
+        if self.trigger == "round_end" and ctx.state_of("used_turn") != ctx.state.turn:
+            return
+        super().on_round_end(ctx)
+
+
+for _handler in (
+    # 无连击 · 物攻
+    GrowthAttack(7020400, "迫近攻击", 0, GROWTH_POWER, 45),
+    GrowthAttack(7020420, "冲撞", 0, GROWTH_ENERGY_COST, -1, trigger="round_end"),
+    # 连击 · 物攻
+    GrowthAttack(7020510, "乘胜追击", 0, GROWTH_HIT_COUNT, 1),
+    GrowthAttack(7030450, "孢子爆散", 0, GROWTH_HIT_COUNT, 2, hits=2),
+):
+    register(_handler)
+
+
+# ---------------- 7020570 能量刃（自身每应对成功1次永久成长） ----------------
+class EnergyEdge(OpsSkill):
+    """造成物伤；自身每应对成功 1 次，本技能威力永久 +90。
+
+    普通系（element 0）物攻，威力 80、能耗 3。描述**没有**写应对类别，因此
+    本技能不参与应对判定（不自带应对）；成长按**精灵级**应对计数累计：每次
+    回合末与上次记录的差值 × 90 写入威力成长，来源可以是任何技能或行动的
+    应对成功。计数跨离场保留，与 ``BattlePet.counter_stats`` 同生命周期。
+    """
+
+    skill_id = 7020570
+    name = "能量刃"
+    category = 0
+    implemented = True
+
+    def on_round_end(self, ctx):
+        seen = ctx.state_of("counter_seen", 0)
+        total = ctx.actor.counter_stats["count"]
+        if total <= seen:
+            return
+        SkillGrowth(field=GROWTH_POWER, delta=90 * (total - seen)).apply(ctx)
+        ctx.set_state("counter_seen", total)
+
+
+register(EnergyEdge())
+
+
+# ---------------- 敌方换人奖励攻击 ----------------
+class SwitchRewardAttack(OpsSkill):
+    """造成伤害；若敌方本回合更换过精灵，追加奖励。
+
+    判定复用 ``EnemySwitchedThisTurn``（目标入场回合等于当前回合）。换人先于
+    行动结算（step 中 switch 先行），故敌方本回合主动换人在技能结算时即刻
+    成立。power_flat 计入本次威力增量；energy 在命中后回复。
+    新增同类技能只在下表加一行。
+    """
+
+    def __init__(self, skill_id, name, category, power_flat=0, energy=0, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.power_on_switch = power_flat
+        self.implemented = True
+        if energy:
+            self.hit_effects = (
+                When(condition=EnemySwitchedThisTurn(),
+                     effects=(GainEnergy(value=energy),)),
+            )
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if self.power_on_switch and EnemySwitchedThisTurn().test(ctx):
+            flat += self.power_on_switch
+        return (percent, flat)
+
+
+for _handler in (
+    SwitchRewardAttack(7021010, "当头棒喝", 0, power_flat=100),
+    SwitchRewardAttack(7030610, "针刺射击", 0, energy=7),
+):
+    register(_handler)
+
+
+# ---------------- 命中附加减益攻击 ----------------
+class HitDebuffAttack(OpsSkill):
+    """造成伤害，命中后使敌方获得固定层数的减益。
+
+    value 为 buff 层数（10%/层的属性类按层给：速度 -30 记 -3 层）。应对状态
+    成功时可追加层数（counter_value）并按倍率放大本次威力
+    （counter_power_mult，增量折算见 P11）。层数钳制、免疫与获得广播统一走
+    ``ApplyBuff``。新增同类技能只在下表加一行。
+    """
+
+    def __init__(self, skill_id, name, category, buff_type, value,
+                 counter_value=0, counter_power_mult=1.0, hits=1):
+        self.skill_id = skill_id
+        self.name = name
+        self.category = category
+        self.hit_count_flat = hits - 1
+        self.implemented = True
+        self.counter_mult = counter_power_mult
+        self.hit_effects = (
+            ApplyBuff(buff_type=buff_type, value=value, target=ENEMY),
+        )
+        if counter_value:
+            self.counter_target = COUNTER_STATUS
+            self.counter_effects = (
+                ApplyBuff(buff_type=buff_type, value=counter_value, target=ENEMY),
+            )
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.is_counter and self.counter_mult != 1.0:
+            percent += (self.counter_mult - 1) * 100
+        return (percent, flat)
+
+
+for _handler in (
+    HitDebuffAttack(7040630, "花火", 0, buffs.BuffType.BURN, 4),
+    HitDebuffAttack(7080350, "震击", 0, buffs.BuffType.HIT_COUNT_FLAT, -3),
+    HitDebuffAttack(7090120, "冰晶坠", 0, buffs.BuffType.ENERGY_COST, 1),
+    HitDebuffAttack(7090270, "滚雪球", 0, buffs.BuffType.FREEZE, 2,
+                    counter_value=2, counter_power_mult=2),
+    HitDebuffAttack(7090280, "丢冰块", 0, buffs.BuffType.SPEED, -3),
 ):
     register(_handler)
 
@@ -1212,6 +1378,150 @@ class BetWager(OpsSkill):
 register(BetWager())
 
 
+# 7020560 垂死反击
+class DesperateCounter(OpsSkill):
+    """造成物伤；自己每失去 5% 生命，本次技能威力 +5。
+
+    普通系（element 0）物攻，威力 80、能耗 4。步进用整数算术，满血为 0
+    （per_missing_hp，与彗星同一接口，目标为自己）。
+    """
+
+    skill_id = 7020560
+    name = "垂死反击"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        return (percent, flat + per_missing_hp(5, step=0.05)(ctx))
+
+
+register(DesperateCounter())
+
+
+# 7021150 逆袭
+class CostSurge(OpsSkill):
+    """造成物伤；本技能能耗每 +1，威力 +50。
+
+    普通系（element 0）物攻，威力 55、能耗 1。能耗差 = 真实能耗 - 数据能耗，
+    真实能耗走 ``true_energy_cost``（buff / 印记 / 天气 / 特性 / 技能自身修正，
+    最后统一钳制到 0），与付费、显示同一条管线。能耗低于数据值时不减威力。
+    """
+
+    skill_id = 7021150
+    name = "逆袭"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        cost = skill_utils.true_energy_cost(
+            ctx.state, ctx.actor, ctx.skill, skill_index=ctx.skill_index
+        )
+        flat += 50 * max(0, cost - ctx.skill.energy_cost)
+        return (percent, flat)
+
+
+register(CostSurge())
+
+
+# 7030530 抽枝
+class BranchDraw(OpsSkill):
+    """造成物伤；应对状态成功时回复 50% 生命与 5 能量。
+
+    草系（element 4）物攻，威力 90、能耗 4。应对奖励在回合末第一步结算
+    （B38），回复与扣能的目标都按结算时的在场状态解析。
+    """
+
+    skill_id = 7030530
+    name = "抽枝"
+    category = 0
+    counter_target = COUNTER_STATUS
+    implemented = True
+    counter_effects = (Heal(percent=0.5), GainEnergy(value=5))
+
+
+register(BranchDraw())
+
+
+# 7030590 丰收
+class Harvest(OpsSkill):
+    """造成物伤；命中后回复 20% 生命。
+
+    草系（element 4）物攻，威力 85、能耗 5。命中附加立即结算（B39），
+    回复量经 ``traits.query_heal`` 过滤后写入生命。
+    """
+
+    skill_id = 7030590
+    name = "丰收"
+    category = 0
+    implemented = True
+    hit_effects = (Heal(percent=0.2),)
+
+
+register(Harvest())
+
+
+# 7040650 焚身
+class SelfImmolate(OpsSkill):
+    """造成高额物伤；自己下回合获得眩晕。
+
+    火系（element 2）物攻，威力 180、能耗 5。眩晕在**回合开始时**施加：
+    本回合命中只登记 ``BattlePet.pending_dizzy``，下一回合开始时转为眩晕层数，
+    因此下回合无法行动、该回合结束时减 1 层（B35）。
+    """
+
+    skill_id = 7040650
+    name = "焚身"
+    category = 0
+    implemented = True
+
+    def on_hit(self, ctx):
+        ctx.actor.pending_dizzy += 1
+
+
+register(SelfImmolate())
+
+
+# 7080470 砂石冲撞
+class SandRam(OpsSkill):
+    """造成物伤；若敌方本回合更换精灵，自己获得物防 +100%。
+
+    地系（element 5）物攻，威力 80、能耗 3。条件复用
+    ``EnemySwitchedThisTurn``；物防 +100% = 10 层（每层 10%）。
+    """
+
+    skill_id = 7080470
+    name = "砂石冲撞"
+    category = 0
+    implemented = True
+    hit_effects = (
+        When(condition=EnemySwitchedThisTurn(),
+             effects=(ApplyBuff(buff_type=buffs.BuffType.DEF, value=10),)),
+    )
+
+
+register(SandRam())
+
+
+# 7090430 冷凝
+class Condense(OpsSkill):
+    """造成物伤；敌方每有 1 层冻结，自己回复 1 能量。
+
+    冰系（element 6）物攻，威力 95、能耗 4。层数在命中时实时读取
+    （per_stack，目标为敌方）。
+    """
+
+    skill_id = 7090430
+    name = "冷凝"
+    category = 0
+    implemented = True
+    hit_effects = (GainEnergy(value=per_stack(buffs.BuffType.FREEZE, 1, ENEMY)),)
+
+
+register(Condense())
+
+
 # ---------------- 无连击 · 魔攻 ----------------
 
 
@@ -1855,6 +2165,29 @@ class Bite(OpsSkill):
 
 
 register(Bite())
+
+
+# 7020460 连续爪击
+class DoubleClaw(OpsSkill):
+    """造成物伤，2 连击；应对状态成功时本次连击数翻倍。
+
+    普通系（element 0）物攻，威力 30、能耗 2。固有 2 连击 =
+    基础 1 + hit_count_flat 1。翻倍作用在**最终连击数**上（buff / 特性 /
+    成长之后），走 ``adjust_hit_count`` 乘算而不是强制值覆盖——与灵光同口径。
+    """
+
+    skill_id = 7020460
+    name = "连续爪击"
+    category = 0
+    counter_target = COUNTER_STATUS
+    hit_count_flat = 1
+    implemented = True
+
+    def adjust_hit_count(self, ctx, count):
+        return count * 2 if ctx.is_counter else count
+
+
+register(DoubleClaw())
 
 
 # ---------------- 连击 · 魔攻 ----------------
