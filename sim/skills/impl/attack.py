@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from ... import buffs, skill_utils, traits, weather
-from ...data_loader import build_skill_map, skill_group_ids
+from ...data_loader import build_skill_map, load_typechart, skill_group_ids
 from ...evolution import can_cute
 from ..ops import (
     COUNTER_DEFENSE,
@@ -39,6 +39,7 @@ from ..ops import (
     Heal,
     IsCounter,
     KilledTarget,
+    MarkAtLeast,
     LeaveField,
     LoseEnergy,
     LoseHp,
@@ -46,6 +47,7 @@ from ..ops import (
     OpsSkill,
     Repeat,
     SkillGrowth,
+    StealEnergy,
     SlotIn,
     UsedAttackSkillLastTurn,
     When,
@@ -229,8 +231,9 @@ class GrowthAttack(OpsSkill):
     伤害、显示与付费。trigger 决定成长时机：
 
     - ``after_use``：使用后立即成长（"每次使用后…"）；
-    - ``round_end``：回合结束时成长（"回合结束时…"），**只在本回合确实使用过
-      本技能时成立**——聚能、换人、眩晕都不算使用，不得因此减费；
+    - ``round_end``：回合结束时成长，**只在本回合确实使用过本技能时成立**
+      ——聚能、换人、眩晕都不算使用，不得因此减费（冲撞）；
+    - ``round_end_any``：每个回合结束时都成长，与是否使用无关（抛石）；
     - ``counter``：应对成功时成长（"每应对成功1次…"）。此触发要求描述自带
       应对类别；只写"每应对成功1次"而没有类别的按特性式累计处理，见
       ``EnergyEdge``。
@@ -250,7 +253,7 @@ class GrowthAttack(OpsSkill):
         if trigger == "counter":
             self.counter_target = COUNTER_STATUS
             self.counter_effects = growth
-        elif trigger == "round_end":
+        elif trigger in ("round_end", "round_end_any"):
             self.round_end_effects = growth
         else:
             self.after_use_effects = growth
@@ -273,6 +276,7 @@ for _handler in (
     # 连击 · 物攻
     GrowthAttack(7020510, "乘胜追击", 0, GROWTH_HIT_COUNT, 1),
     GrowthAttack(7030450, "孢子爆散", 0, GROWTH_HIT_COUNT, 2, hits=2),
+    GrowthAttack(7080170, "抛石", 0, GROWTH_ENERGY_COST, -5, trigger="round_end_any"),
 ):
     register(_handler)
 
@@ -560,6 +564,372 @@ class RecoilStrike(OpsSkill):
 
 
 register(RecoilStrike(7180290, "跌落", 0, 5))
+
+
+# ---------------- 第三批：条件与资源类攻击 ----------------
+FIRE_ELEMENT = 2
+CUTE_ELEMENT = 13
+
+
+def _both_prev_element(ctx, element: int) -> bool:
+    """双方上场精灵上回合都使用过指定属性的技能。"""
+    target = ctx.target
+    return (ctx.actor.prev_skill_element == element
+            and target is not None and target.prev_skill_element == element)
+
+
+class LastStatusPower(OpsSkill):
+    """造成物伤；若上回合使用过状态技能，本次威力 +55。"""
+
+    skill_id = 7020430
+    name = "见招拆招"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.actor.prev_skill_category == "status":
+            flat += 55
+        return (percent, flat)
+
+
+register(LastStatusPower())
+
+
+class CuteEchoEnergy(OpsSkill):
+    """造成物伤；若上回合双方都使用过萌系技能，回复 7 能量。"""
+
+    skill_id = 7030620
+    name = "麦芒"
+    category = 0
+    implemented = True
+
+    def on_hit(self, ctx):
+        if _both_prev_element(ctx, CUTE_ELEMENT):
+            GainEnergy(value=7).apply(ctx)
+
+
+register(CuteEchoEnergy())
+
+
+class FireGrowth(OpsSkill):
+    """造成物伤；每使用 1 次其他火系技能，本技能威力永久翻倍。
+
+    威力由"其他火系技能使用次数"决定：基础威力 × 2^n，走绝对覆盖（D6）。
+    自身不计入；次数取整场使用记录。
+    """
+
+    skill_id = 7040250
+    name = "山火"
+    category = 0
+    implemented = True
+
+    def absolute_power(self, ctx):
+        skill_map = build_skill_map()
+        uses = sum(
+            n for sid, n in ctx.actor.used_skill_counts.items()
+            if sid != self.skill_id and sid in skill_map
+            and skill_map[sid]["element"] == FIRE_ELEMENT
+        )
+        return 15 * (2 ** uses)
+
+
+register(FireGrowth())
+
+
+class WarmSun(OpsSkill):
+    """造成物伤；每使用 1 次其他火系技能威力永久 +40，使用本技能后重置。"""
+
+    skill_id = 7040690
+    name = "暖阳"
+    category = 0
+    implemented = True
+
+    def _other_fire_uses(self, ctx) -> int:
+        skill_map = build_skill_map()
+        return sum(
+            n for sid, n in ctx.actor.used_skill_counts.items()
+            if sid != self.skill_id and sid in skill_map
+            and skill_map[sid]["element"] == FIRE_ELEMENT
+        )
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        base = ctx.state_of("fire_seen", 0)
+        flat += 40 * max(0, self._other_fire_uses(ctx) - base)
+        return (percent, flat)
+
+    def on_after_use(self, ctx):
+        ctx.set_state("fire_seen", self._other_fire_uses(ctx))
+
+
+register(WarmSun())
+
+
+class WaveStack(OpsSkill):
+    """造成物伤，3 连击；本技能能耗每 -1，威力 +10。"""
+
+    skill_id = 7050480
+    name = "叠浪"
+    category = 0
+    hit_count_flat = 2
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        actual = skill_utils.true_energy_cost(
+            ctx.state, ctx.actor, ctx.skill, skill_index=ctx.skill_index)
+        reduction = max(0, ctx.skill.energy_cost - actual)
+        flat += 10 * reduction
+        return (percent, flat)
+
+
+register(WaveStack())
+
+
+class GrindingWheel(OpsSkill):
+    """造成物伤；每受到 1 次被抵抗的技能攻击，本技能能耗永久 -1。
+
+    "抵抗"按属性克制倍率 < 1 判定（受击广播带本次来招）。
+    """
+
+    skill_id = 7070300
+    name = "绞轮"
+    category = 0
+    implemented = True
+
+    def on_take_damage(self, ctx):
+        incoming = ctx.extra.get("incoming_skill")
+        if incoming is None:
+            return
+        from ...typechart import type_multiplier
+
+        if type_multiplier(incoming.element, ctx.actor.attributes, load_typechart()) < 1:
+            SkillGrowth(field=GROWTH_ENERGY_COST, delta=-1).apply(ctx)
+
+
+register(GrindingWheel())
+
+
+class Tractor(OpsSkill):
+    """造成物伤；位于 1 号位时先手 +1，传动 1。"""
+
+    skill_id = 7070340
+    name = "拖拉机"
+    category = 0
+    drive = 1
+    implemented = True
+
+    def modify_priority(self, ctx):
+        return super().modify_priority(ctx) + (1 if SlotIn(slots=(1,)).test(ctx) else 0)
+
+
+register(Tractor())
+
+
+class StoneLock(OpsSkill):
+    """造成物伤；敌方获得 3 层禁足（每回合结束减 1 层）。"""
+
+    skill_id = 7080150
+    name = "石锁"
+    category = 0
+    implemented = True
+    hit_effects = (ApplyBuff(buff_type=buffs.BuffType.LOCK, value=3, target=ENEMY),)
+
+
+register(StoneLock())
+
+
+class GroundSink(OpsSkill):
+    """造成物伤；自己物防 +70%；应对状态时威力翻倍且物防再 +70%。"""
+
+    skill_id = 7080330
+    name = "地陷"
+    category = 0
+    counter_target = COUNTER_STATUS
+    implemented = True
+    hit_effects = (ApplyBuff(buff_type=buffs.BuffType.DEF, value=7),)
+    counter_effects = (ApplyBuff(buff_type=buffs.BuffType.DEF, value=7),)
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.is_counter:
+            percent += 100
+        return (percent, flat)
+
+
+register(GroundSink())
+
+
+class ChargedBreath(OpsSkill):
+    """蓄力；造成物伤，应对状态时本次威力翻倍。"""
+
+    skill_id = 7100130
+    name = "吹炎"
+    category = 0
+    windup = True
+    counter_target = COUNTER_STATUS
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.is_counter:
+            percent += 100
+        return (percent, flat)
+
+
+register(ChargedBreath())
+
+
+class WingBlade(OpsSkill):
+    """造成物伤；驱散敌方所有印记，应对状态时改为偷取。"""
+
+    skill_id = 7130290
+    name = "翅刃"
+    category = 0
+    counter_target = COUNTER_STATUS
+    implemented = True
+    hit_effects = (
+        When(condition=Not(condition=IsCounter()),
+             effects=(DispelMarks(count=None, target=ENEMY),)),
+    )
+    counter_effects = (DispelMarks(count=None, steal=True, target=ENEMY),)
+
+
+register(WingBlade())
+
+
+class MoonlightChorus(OpsSkill):
+    """造成物伤，1 连击；双方全部精灵每有 1 层萌化，本次连击 +1。"""
+
+    skill_id = 7160280
+    name = "月光合奏"
+    category = 0
+    implemented = True
+
+    def modify_hit_count(self, ctx):
+        flat, percent, forced = super().modify_hit_count(ctx)
+        total = sum(
+            buffs.get_buff_value(pet, buffs.BuffType.CUTE)
+            for team in ctx.state.teams.values() for pet in team
+        )
+        return (flat + total, percent, forced)
+
+
+register(MoonlightChorus())
+
+
+class GiftOpen(OpsSkill):
+    """造成物伤；若敌方有萌化，本次威力 +100。"""
+
+    skill_id = 7160330
+    name = "拆礼物"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        if ctx.target is not None and buffs.get_buff_value(ctx.target, buffs.BuffType.CUTE) > 0:
+            flat += 100
+        return (percent, flat)
+
+
+register(GiftOpen())
+
+
+class ShadowSteal(OpsSkill):
+    """造成物伤；若上回合双方都使用过火系技能，偷取敌方 3 能量。"""
+
+    skill_id = 7170350
+    name = "掠影"
+    category = 0
+    implemented = True
+
+    def on_hit(self, ctx):
+        if _both_prev_element(ctx, FIRE_ELEMENT):
+            StealEnergy(value=3).apply(ctx)
+
+
+register(ShadowSteal())
+
+
+class OtherShore(OpsSkill):
+    """造成物伤；自己每失去 10% 生命，本技能能耗 -1。"""
+
+    skill_id = 7180150
+    name = "彼岸之手"
+    category = 0
+    implemented = True
+
+    def modify_energy_cost(self, ctx):
+        return super().modify_energy_cost(ctx) - per_missing_hp(1, step=0.1)(ctx)
+
+
+register(OtherShore())
+
+
+class SpacePressure(OpsSkill):
+    """造成物伤；敌方获得 1 层星陨印记。"""
+
+    skill_id = 7190220
+    name = "空间压迫"
+    category = 0
+    implemented = True
+    hit_effects = (AddMark(mark_id=STAR_MARK, stacks=1, target=ENEMY),)
+
+
+register(SpacePressure())
+
+
+class Accretion(OpsSkill):
+    """造成物伤；敌方每有 1 层印记，本次威力 +20。"""
+
+    skill_id = 7190440
+    name = "天体吸积"
+    category = 0
+    implemented = True
+
+    def modify_power(self, ctx):
+        percent, flat = super().modify_power(ctx)
+        return (percent, flat + per_any_mark(20, ENEMY)(ctx))
+
+
+register(Accretion())
+
+
+class Eclipse(OpsSkill):
+    """造成物伤；若敌方生命低于 50%，本技能能耗 -3。"""
+
+    skill_id = 7190470
+    name = "月蚀"
+    category = 0
+    implemented = True
+
+    def modify_energy_cost(self, ctx):
+        delta = super().modify_energy_cost(ctx)
+        target = ctx.target
+        if target is not None and target.hp * 2 < target.max_hp:
+            delta -= 3
+        return delta
+
+
+register(Eclipse())
+
+
+class QuantumFlux(OpsSkill):
+    """造成物伤；若敌方没有星陨印记，则使其获得 3 层。"""
+
+    skill_id = 7190500
+    name = "量子涨落"
+    category = 0
+    implemented = True
+    hit_effects = (
+        When(condition=Not(condition=MarkAtLeast(mark_id=STAR_MARK, value=1, target=ENEMY)),
+             effects=(AddMark(mark_id=STAR_MARK, stacks=3, target=ENEMY),)),
+    )
+
+
+register(QuantumFlux())
 
 
 # ---------------- 7060270 色散 ----------------

@@ -94,7 +94,7 @@
       "energyCost": 2,
       "power": 65,
       "desc": "造成物伤，若上回合使用状态技能，本次技能威力+55。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -1447,7 +1447,7 @@
       "energyCost": 3,
       "power": 15,
       "desc": "造成物伤，每使用1次其他火系技能，本技能威力永久翻倍。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2063,7 +2063,7 @@
       "energyCost": 3,
       "power": 10,
       "desc": "造成物伤，3连击，本技能能耗每-1，威力+10。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2580,7 +2580,7 @@
       "energyCost": 5,
       "power": 115,
       "desc": "造成物伤，每受到1次抵抗的技能攻击（不含连击），本技能能耗永久-1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2635,7 +2635,7 @@
       "energyCost": 3,
       "power": 50,
       "desc": "造成物伤，敌方获得3回合禁足。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2657,7 +2657,7 @@
       "energyCost": 30,
       "power": 140,
       "desc": "造成物伤，回合结束时，本技能能耗永久-5。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -2822,7 +2822,7 @@
       "energyCost": 5,
       "power": 80,
       "desc": "造成物伤，自己获得物防+70%，应对状态：本次技能威力翻倍，且物防额外+70%。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -3328,7 +3328,7 @@
       "energyCost": 3,
       "power": 170,
       "desc": "蓄力，造成物伤，应对状态：本次技能威力翻倍。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -4274,7 +4274,7 @@
       "energyCost": 3,
       "power": 85,
       "desc": "造成物伤，驱散敌方所有印记，应对状态：改为偷取印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5110,7 +5110,7 @@
       "energyCost": 3,
       "power": 30,
       "desc": "造成物伤，1连击，双方携带的所有精灵每有1层萌化，本次技能连击数+1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5132,7 +5132,7 @@
       "energyCost": 3,
       "power": 50,
       "desc": "造成物伤，若敌方有萌化，本次技能威力+100。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5539,7 +5539,7 @@
       "energyCost": 10,
       "power": 150,
       "desc": "造成物伤，自己每失去10%生命，本技能能耗-1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -5847,7 +5847,7 @@
       "energyCost": 3,
       "power": 70,
       "desc": "造成物伤，敌方获得1层星陨印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6078,7 +6078,7 @@
       "energyCost": 4,
       "power": 20,
       "desc": "造成物伤，敌方每有1层印记，本次攻击威力+20。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6111,7 +6111,7 @@
       "energyCost": 5,
       "power": 105,
       "desc": "造成物伤，若上回合双方有精灵使用萌系技能，自己回复7能量。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6122,7 +6122,7 @@
       "energyCost": 2,
       "power": 70,
       "desc": "造成物伤，每使用1次其他火系技能，威力永久+40，使用本技能后重置。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6188,7 +6188,7 @@
       "energyCost": 3,
       "power": 85,
       "desc": "造成物伤，位于1号位时，先手+1。传动1。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6276,7 +6276,7 @@
       "energyCost": 3,
       "power": 65,
       "desc": "造成物伤，若上回合双方有精灵使用火系技能，偷取敌方3能量。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6331,7 +6331,7 @@
       "energyCost": 5,
       "power": 130,
       "desc": "造成物伤，若敌方生命低于50%，本次技能能耗-3。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {
@@ -6364,7 +6364,7 @@
       "energyCost": 3,
       "power": 75,
       "desc": "造成物伤，若敌方没有星陨印记，则敌方获得3层星陨印记。",
-      "done": false,
+      "done": true,
       "tested": false
     },
     {

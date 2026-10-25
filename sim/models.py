@@ -101,6 +101,12 @@ class BattlePet:
     # （用户口径：蓄力算作未使用攻击技能），释放回合照常算；重放出的攻击技能也算。
     attack_used_this_turn: bool = False
     attack_used_last_turn: bool = False
+    # 本回合最近一次使用技能的属性与类别；回合开始时平移到 prev_*
+    # （"上回合使用状态技能"、"上回合双方使用火系技能"类判定用）
+    last_skill_element: int | None = None
+    last_skill_category: str = ""
+    prev_skill_element: int | None = None
+    prev_skill_category: str = ""
 
     def __setattr__(self, name, value) -> None:
         object.__setattr__(self, name, value)
