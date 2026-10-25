@@ -38,7 +38,7 @@ import random
 from dataclasses import dataclass
 from typing import Callable, ClassVar, Optional
 
-from .. import buffs, burst, marks, skill_utils, traits, weather as weather_mod
+from .. import buffs, burst, marks, offerings, skill_utils, traits, weather as weather_mod
 from ..damage import calc_damage, power_modifiers
 from ..data_loader import build_skill_map, load_typechart
 from ..evolution import can_cute
@@ -743,15 +743,27 @@ class Choose(Effect):
         ctx.extra.setdefault("unimplemented", []).append(f"choose:{self.label}")
 
 
+# ==================== 奉献 ====================
+
+
 @dataclass(kw_only=True)
 class Offering(Effect):
-    """⚠ 未建模：奉献（队伍级资源，10 条技能使用）。"""
+    """己方队伍获得奉献（队伍级资源，SPEC B45）。
+
+    grant 为空时每次从五种效果中随机抽取；给出种类时逐种获得 times 次
+    （"己方队伍获得1次奉献：连击+1或威力+20"由 handler 按选择结果传入一种）。
+    """
 
     times: int = 1
     grant: tuple = ()
 
     def apply(self, ctx: SkillContext) -> None:
-        ctx.extra.setdefault("unimplemented", []).append("offering")
+        times = _value(self.times, ctx)
+        if not self.grant:
+            offerings.grant_random(ctx.state, ctx.actor.side, times)
+            return
+        for kind in self.grant:
+            offerings.grant(ctx.state, ctx.actor.side, kind, times)
 
 
 # ==================== 条件原语 ====================

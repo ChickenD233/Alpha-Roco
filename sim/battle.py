@@ -11,6 +11,7 @@ from . import (
     burst,
     counter,
     marks,
+    offerings,
     resonance,
     skill_utils,
     skills,
@@ -2382,6 +2383,10 @@ def state_to_dict(state: BattleState, view_side: str | None = None) -> dict:
         "log": state.log,
         "magic": state.magic,
         "active": state.active,
+        "offerings": {
+            side: offerings.summary(state, side) if view_side in (None, side) else []
+            for side in ("A", "B")
+        },
         "round_end_order": list(state.round_end_order),
         "weather": state.weather,
         "marks": state.marks,
