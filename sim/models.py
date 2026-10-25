@@ -124,6 +124,8 @@ class BattleState:
     teams: dict = field(default_factory=dict)
     active: dict = field(default_factory=lambda: {"A": 0, "B": 0})
     magic: dict = field(default_factory=lambda: {"A": 4, "B": 4})
+    # 奉献（队伍级资源）：每种效果的获得次数，见 sim/offerings.py
+    offerings: dict = field(default_factory=lambda: {"A": {}, "B": {}})
     marks: dict = field(
         default_factory=lambda: {
             "A": {"positive": None, "negative": None},
