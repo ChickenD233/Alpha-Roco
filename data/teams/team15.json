@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "顶分",
+  "name": "星陨队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "怖哭菇",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 3,
+      "skills": [
+        "星链",
+        "冥想",
+        "心灵洞悉",
+        "吓退"
+      ]
+    },
+    {
+      "spirit": "暮星辰",
+      "nature": 23,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 3,
+      "skills": [
+        "翼击",
+        "超维投射",
+        "先发制人",
+        "恐吓"
+      ]
+    },
+    {
+      "spirit": "玳塔",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 3,
+      "skills": [
+        "错乱",
+        "血气",
+        "超维投射",
+        "心灵洞悉"
+      ]
+    },
+    {
+      "spirit": "小皮球",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 2,
+      "skills": [
+        "超维投射",
+        "心灵洞悉",
+        "引燃",
+        "吓退"
+      ]
+    },
+    {
+      "spirit": "离心舞者",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 12,
+      "skills": [
+        "羽化加速",
+        "离子震荡",
+        "多维击打",
+        "轴承支撑"
+      ]
+    },
+    {
+      "spirit": "龙息帕尔",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 1,
+      "skills": [
+        "力量增效",
+        "先发制人",
+        "极限撕裂",
+        "火云车"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "上分",
+  "name": "龙鱼毒队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "裘卡",
+      "nature": 29,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 5,
+      "skills": [
+        "毒孢子",
+        "毒囊",
+        "阻断",
+        "防御"
+      ]
+    },
+    {
+      "spirit": "龙鱼",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 8,
+      "skills": [
+        "力量增效",
+        "龙之利爪",
+        "水刃",
+        "隼鳞"
+      ]
+    },
+    {
+      "spirit": "琉璃水母",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 3,
+      "skills": [
+        "泡沫幻影",
+        "甩水",
+        "洗礼",
+        "疫病吐息"
+      ]
+    },
+    {
+      "spirit": "离心舞者",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 3,
+      "skills": [
+        "轴承支撑",
+        "离子震荡",
+        "能量守恒",
+        "翼击"
+      ]
+    },
+    {
+      "spirit": "影狸",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 5,
+      "skills": [
+        "幽灵爆发",
+        "毒液渗透",
+        "恶意逃离",
+        "嘲弄"
+      ]
+    },
+    {
+      "spirit": "绒光优优",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 9,
+      "skills": [
+        "毒孢子",
+        "热砂",
+        "天光",
+        "硬化"
+      ]
+    }
+  ]
+}

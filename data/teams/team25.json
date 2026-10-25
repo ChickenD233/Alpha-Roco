@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "上分",
+  "name": "岚球地武",
+  "resonance": 1,
+  "team": [
+    {
+      "spirit": "小皮球",
+      "nature": 10,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 17,
+      "skills": [
+        "落雷",
+        "大爆炸",
+        "加大功率",
+        "天光"
+      ]
+    },
+    {
+      "spirit": "巨噬针鼹",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 6,
+      "skills": [
+        "力量增效",
+        "冰爪",
+        "先发制人",
+        "地刺"
+      ]
+    },
+    {
+      "spirit": "棋绮后（白子）",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 18,
+      "skills": [
+        "一拳",
+        "鸣沙陷阱",
+        "听桥",
+        "先发制人"
+      ]
+    },
+    {
+      "spirit": "岚鸟（秋天的样子）",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 5,
+      "skills": [
+        "扇风",
+        "跺地",
+        "水刃",
+        "泥浆铠甲"
+      ]
+    },
+    {
+      "spirit": "食尘短绒",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 1,
+      "skills": [
+        "沙涌",
+        "地刺",
+        "棘刺",
+        "遁地"
+      ]
+    },
+    {
+      "spirit": "布克棱岩",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 18,
+      "skills": [
+        "地震",
+        "遁地",
+        "地刺",
+        "壁垒"
+      ]
+    }
+  ]
+}

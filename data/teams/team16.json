@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "顶分",
+  "name": "星陨抢分队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "怖哭菇",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 3,
+      "skills": [
+        "错乱",
+        "吓退",
+        "报复",
+        "休息回复"
+      ]
+    },
+    {
+      "spirit": "离心舞者",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "超维投射",
+        "离子震荡",
+        "翼击",
+        "轴承支撑"
+      ]
+    },
+    {
+      "spirit": "玳塔",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 13,
+      "skills": [
+        "超维投射",
+        "错乱",
+        "甜心续航",
+        "冥想"
+      ]
+    },
+    {
+      "spirit": "布灵布灵",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "透镜实验",
+        "影袭",
+        "天体吸积",
+        "叠加态"
+      ]
+    },
+    {
+      "spirit": "龙息帕尔",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 1,
+      "skills": [
+        "力量增效",
+        "先发制人",
+        "极限撕裂",
+        "火云车"
+      ]
+    },
+    {
+      "spirit": "音速犬",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 8,
+      "skills": [
+        "力量增效",
+        "焚烧烙印",
+        "跌落",
+        "灼伤"
+      ]
+    }
+  ]
+}

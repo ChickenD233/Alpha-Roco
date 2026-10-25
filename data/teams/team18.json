@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "科研",
+  "name": "魔偶控能队",
+  "resonance": 1,
+  "team": [
+    {
+      "spirit": "摇铃魔偶",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 4,
+      "skills": [
+        "嘲弄",
+        "虹光冲击",
+        "幽灵爆发",
+        "广播"
+      ]
+    },
+    {
+      "spirit": "贝古斯",
+      "nature": 5,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 14,
+      "skills": [
+        "能量守恒",
+        "灵媒",
+        "焚烧烙印",
+        "燃尽"
+      ]
+    },
+    {
+      "spirit": "雪影娃娃",
+      "nature": 8,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 18,
+      "skills": [
+        "霜降",
+        "冰墙",
+        "甜心续航",
+        "超级糖果"
+      ]
+    },
+    {
+      "spirit": "霹雳迪迪",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "色散",
+        "落雷",
+        "引燃",
+        "镜像反射"
+      ]
+    },
+    {
+      "spirit": "锤头鹳",
+      "nature": 24,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "操控",
+        "潮涌",
+        "引燃",
+        "晒太阳"
+      ]
+    },
+    {
+      "spirit": "泥吼牙",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 6,
+      "skills": [
+        "落石",
+        "泥浆铠甲",
+        "羽刃",
+        "倾泻"
+      ]
+    }
+  ]
+}

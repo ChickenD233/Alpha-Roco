@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "上分",
+  "name": "摔炮队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "绒仙子",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 16,
+      "skills": [
+        "取念",
+        "啮合传递",
+        "透镜实验",
+        "草虫冲击"
+      ]
+    },
+    {
+      "spirit": "飞飞钥",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 6,
+      "skills": [
+        "倾泻",
+        "拟寄生",
+        "风隐",
+        "飞羽"
+      ]
+    },
+    {
+      "spirit": "加油蟹",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 2,
+      "skills": [
+        "一拳",
+        "水幕冲击",
+        "超级糖果",
+        "打湿"
+      ]
+    },
+    {
+      "spirit": "古卷执政官",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 3,
+      "skills": [
+        "先发制人",
+        "湮灭",
+        "天光",
+        "彗星"
+      ]
+    },
+    {
+      "spirit": "布灵布灵",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "叠加态",
+        "影袭",
+        "透镜实验",
+        "报复"
+      ]
+    },
+    {
+      "spirit": "燃薪虫",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 6,
+      "skills": [
+        "报复",
+        "灼伤",
+        "藤绞",
+        "力量增效"
+      ]
+    }
+  ]
+}

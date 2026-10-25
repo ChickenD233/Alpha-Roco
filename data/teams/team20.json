@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "上分",
+  "name": "迪莫萌龙队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "绒光优优",
+      "nature": 20,
+      "ivs": {
+        "hp": 0,
+        "atk": 0,
+        "def": 10,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 6,
+      "skills": [
+        "热砂",
+        "硬化",
+        "天光",
+        "流沙"
+      ]
+    },
+    {
+      "spirit": "迪莫",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "寒风吹",
+        "折射",
+        "气泡",
+        "棘突"
+      ]
+    },
+    {
+      "spirit": "壳栗丝鼠",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 15,
+      "skills": [
+        "毒囊",
+        "溶解",
+        "倾泻",
+        "棘刺"
+      ]
+    },
+    {
+      "spirit": "克莱因龙",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 11,
+      "skills": [
+        "绵里藏针",
+        "捧杀",
+        "魔法增效",
+        "休息回复"
+      ]
+    },
+    {
+      "spirit": "锤头鹳",
+      "nature": 28,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "引燃",
+        "虚假破产",
+        "潮涌",
+        "洗礼"
+      ]
+    },
+    {
+      "spirit": "布灵布灵",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "叠加态",
+        "透镜实验",
+        "截拳",
+        "报复"
+      ]
+    }
+  ]
+}
