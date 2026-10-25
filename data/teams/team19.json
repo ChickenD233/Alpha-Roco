@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "科研",
+  "name": "龙威魔偶队",
+  "resonance": 1,
+  "team": [
+    {
+      "spirit": "巨灵石",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 1,
+      "skills": [
+        "冰天雪地",
+        "岩土暴击",
+        "冰捆缚",
+        "徒长"
+      ]
+    },
+    {
+      "spirit": "高脚鹬",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 18,
+      "skills": [
+        "穿膛",
+        "风隐",
+        "复写",
+        "吓退"
+      ]
+    },
+    {
+      "spirit": "荆棘电环",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "操控",
+        "落雷",
+        "晒太阳",
+        "火焰冲锋"
+      ]
+    },
+    {
+      "spirit": "银月狼王",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 11,
+      "skills": [
+        "月蚀",
+        "地刺",
+        "撞鬼",
+        "掠影"
+      ]
+    },
+    {
+      "spirit": "翼龙",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 5,
+      "skills": [
+        "龙威",
+        "羽刃",
+        "取念",
+        "龙炮"
+      ]
+    },
+    {
+      "spirit": "摇铃魔偶",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 15,
+      "skills": [
+        "金属噪音",
+        "等价交换",
+        "幽灵爆发",
+        "快速移动"
+      ]
+    }
+  ]
+}

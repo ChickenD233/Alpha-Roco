@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "顶分",
+  "name": "水鲨队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "水灵",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 16,
+      "skills": [
+        "润泽",
+        "离子震荡",
+        "水泡盾",
+        "气泡"
+      ]
+    },
+    {
+      "spirit": "窃光蚊",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "力量增效",
+        "先发制人",
+        "蝙蝠",
+        "光之矛"
+      ]
+    },
+    {
+      "spirit": "彩蝶鲨",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "血气",
+        "贮藏",
+        "回旋风暴",
+        "天洪"
+      ]
+    },
+    {
+      "spirit": "火羽",
+      "nature": 10,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 4,
+      "skills": [
+        "高温回火",
+        "虹光冲击",
+        "幽灵爆发",
+        "倾泻"
+      ]
+    },
+    {
+      "spirit": "冰钻布鲁斯",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "力量增效",
+        "先发制人",
+        "火焰冲锋",
+        "暴风雪"
+      ]
+    },
+    {
+      "spirit": "九幽菇",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 2,
+      "skills": [
+        "溶解",
+        "泥浆铠甲",
+        "鸣沙陷阱",
+        "藤绞"
+      ]
+    }
+  ]
+}

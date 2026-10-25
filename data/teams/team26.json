@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "上分",
+  "name": "狼王地武队",
+  "resonance": 1,
+  "team": [
+    {
+      "spirit": "巨噬针鼹",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 6,
+      "skills": [
+        "冰爪",
+        "地刺",
+        "反击拳",
+        "精神扰乱"
+      ]
+    },
+    {
+      "spirit": "银月狼王",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "撞鬼",
+        "地刺",
+        "月蚀",
+        "泥浆铠甲"
+      ]
+    },
+    {
+      "spirit": "棋绮后（黑子）",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 18,
+      "skills": [
+        "影袭",
+        "鸣沙陷阱",
+        "听桥",
+        "先发制人"
+      ]
+    },
+    {
+      "spirit": "画间沉铁兽",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 6,
+      "skills": [
+        "截拳",
+        "吞噬",
+        "力量增效",
+        "冰爪"
+      ]
+    },
+    {
+      "spirit": "布克棱岩",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 18,
+      "skills": [
+        "地刺",
+        "遁地",
+        "极限撕裂",
+        "石锁"
+      ]
+    },
+    {
+      "spirit": "食尘短绒",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 1,
+      "skills": [
+        "地刺",
+        "倾泻",
+        "沙涌",
+        "不动如山"
+      ]
+    }
+  ]
+}

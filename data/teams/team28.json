@@ -1,0 +1,86 @@
+{
+  "issue": "53期",
+  "type": "随机",
+  "name": "星陨三随机",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "怖哭菇",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 5,
+      "skills": [
+        "错乱",
+        "休息回复",
+        "冥想",
+        "吓退"
+      ]
+    },
+    {
+      "spirit": "随机精灵",
+      "nature": null,
+      "ivs": null,
+      "bloodline": 8,
+      "skills": []
+    },
+    {
+      "spirit": "离心舞者",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 12,
+      "skills": [
+        "羽化加速",
+        "离子震荡",
+        "多维击打",
+        "轴承支撑"
+      ]
+    },
+    {
+      "spirit": "随机精灵",
+      "nature": null,
+      "ivs": null,
+      "bloodline": 3,
+      "skills": []
+    },
+    {
+      "spirit": "龙息帕尔",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 1,
+      "skills": [
+        "力量增效",
+        "先发制人",
+        "蝙蝠",
+        "火云车"
+      ]
+    },
+    {
+      "spirit": "随机精灵",
+      "nature": null,
+      "ivs": null,
+      "bloodline": 16,
+      "skills": []
+    }
+  ]
+}

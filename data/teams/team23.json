@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "上分",
+  "name": "亚龙章脑队",
+  "resonance": 0,
+  "team": [
+    {
+      "spirit": "伊兰亚龙",
+      "nature": 10,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "氧输送",
+        "绵里藏针",
+        "突袭",
+        "撒花"
+      ]
+    },
+    {
+      "spirit": "寂灭骨龙",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 14,
+      "skills": [
+        "力量增效",
+        "报复",
+        "偷袭",
+        "隼鳞"
+      ]
+    },
+    {
+      "spirit": "智辉章脑",
+      "nature": 25,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 2,
+      "skills": [
+        "感电",
+        "水光冲击",
+        "打湿",
+        "加大功率"
+      ]
+    },
+    {
+      "spirit": "帕帕斯卡",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 8,
+      "skills": [
+        "钢铁洪流",
+        "倾泻",
+        "俯冲猛击",
+        "轮班"
+      ]
+    },
+    {
+      "spirit": "霹雳迪迪",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 6,
+      "skills": [
+        "色散",
+        "落雷",
+        "取念",
+        "镜像反射"
+      ]
+    },
+    {
+      "spirit": "圣剑-X",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 11,
+      "skills": [
+        "拖拉机",
+        "齿轮切开",
+        "啮合传递",
+        "鸣沙陷阱"
+      ]
+    }
+  ]
+}

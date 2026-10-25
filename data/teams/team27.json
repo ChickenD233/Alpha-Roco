@@ -1,0 +1,98 @@
+{
+  "issue": "53期",
+  "type": "随机",
+  "name": "水莎二随机",
+  "resonance": 2,
+  "team": [
+    {
+      "spirit": "彩蝶鲨",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 16,
+      "skills": [
+        "天洪",
+        "离子震荡",
+        "贮藏",
+        "寒风吹"
+      ]
+    },
+    {
+      "spirit": "随机精灵",
+      "nature": null,
+      "ivs": null,
+      "bloodline": 1,
+      "skills": []
+    },
+    {
+      "spirit": "冰钻布鲁斯",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 2,
+      "skills": [
+        "力量增效",
+        "先发制人",
+        "火焰冲锋",
+        "冰雹"
+      ]
+    },
+    {
+      "spirit": "随机精灵",
+      "nature": null,
+      "ivs": null,
+      "bloodline": 7,
+      "skills": []
+    },
+    {
+      "spirit": "布灵布灵",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 14,
+      "skills": [
+        "透镜实验",
+        "截拳",
+        "报复",
+        "叠加态"
+      ]
+    },
+    {
+      "spirit": "水灵",
+      "nature": 20,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 0,
+        "spatk": 10,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 3,
+      "skills": [
+        "气泡",
+        "寒风吹",
+        "润泽",
+        "水泡盾"
+      ]
+    }
+  ]
+}

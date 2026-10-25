@@ -1,0 +1,122 @@
+{
+  "issue": "53期",
+  "type": "科研",
+  "name": "狗狮火队",
+  "resonance": 1,
+  "team": [
+    {
+      "spirit": "音速犬",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 18,
+      "skills": [
+        "热身",
+        "偷袭",
+        "流星火雨",
+        "当头棒喝"
+      ]
+    },
+    {
+      "spirit": "火焰猿",
+      "nature": 1,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 2,
+      "skills": [
+        "吹火",
+        "焚烧烙印",
+        "先发制人",
+        "钧势"
+      ]
+    },
+    {
+      "spirit": "皇家狮鹫（崖间地的样子）",
+      "nature": 22,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 0,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 10
+      },
+      "bloodline": 12,
+      "skills": [
+        "羽化加速",
+        "双响炮",
+        "啄击",
+        "缠丝劲"
+      ]
+    },
+    {
+      "spirit": "燃薪虫",
+      "nature": 6,
+      "ivs": {
+        "hp": 10,
+        "atk": 0,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 10,
+        "speed": 0
+      },
+      "bloodline": 2,
+      "skills": [
+        "山火",
+        "高温回火",
+        "火焰护盾",
+        "引燃"
+      ]
+    },
+    {
+      "spirit": "烈火守护",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 18,
+      "skills": [
+        "撕咬",
+        "先发制人",
+        "力量增效",
+        "反击拳"
+      ]
+    },
+    {
+      "spirit": "爆焰喷喷",
+      "nature": 27,
+      "ivs": {
+        "hp": 10,
+        "atk": 10,
+        "def": 10,
+        "spatk": 0,
+        "spdef": 0,
+        "speed": 0
+      },
+      "bloodline": 13,
+      "skills": [
+        "淬火",
+        "龙吟",
+        "流星火雨",
+        "冲撞"
+      ]
+    }
+  ]
+}
