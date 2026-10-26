@@ -1144,6 +1144,9 @@ def _resolve_action(
         # （蓄力算作未使用攻击技能），释放回合在此正常记账。
         if skill.category in (0, 1):
             pet.attack_used_this_turn = True
+        # "上回合双方使用X系技能"类判定的来源（麦芒/掠影）：按技能数据属性记本回合
+        pet.last_skill_element = skill.element
+        pet.last_skill_category = skill_utils.category_of(skill)
     logs.append(f"{side} {pet.name} 使用 {skill.name}")
     if used is not None:
         used.append(skill)
@@ -1907,6 +1910,10 @@ def step(state: BattleState, action_a: Action, action_b: Action) -> BattleState:
             # 平移到上回合并清零；本回合内的新记录只影响下一回合的判定。
             pet.attack_used_last_turn = pet.attack_used_this_turn
             pet.attack_used_this_turn = False
+            pet.prev_skill_element = pet.last_skill_element
+            pet.prev_skill_category = pet.last_skill_category
+            pet.last_skill_element = None
+            pet.last_skill_category = ""
 
     for side, action in (("A", action_a), ("B", action_b)):
         if action.kind == "flee":

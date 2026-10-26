@@ -193,6 +193,7 @@ class Buff:
     source_side: str = ""
     source_pet: str = ""
     expire_turn: int | None = None
+    applied_turn: int = 0  # 获得时的回合（禁足等按回合递减的效果据此跳过当回合）
     source_kind: str = ""  # "" = 技能/常规来源；"debuff" = 特性给敌方施加的减益；
     # "trait" = 特性自身的展示效果（不是增益/减益，另一类别）
 
@@ -349,6 +350,7 @@ def add_buff(
                 duration=duration,
                 source_side=source_side,
                 source_pet=source_pet,
+                applied_turn=current_turn or 0,
                 source_kind=source_kind,
             )
         )
@@ -482,7 +484,7 @@ def on_round_end(state) -> None:
             _apply_burn(pet, typechart, state)
             _apply_leech(pet, state, typechart)
             _apply_dizzy(pet)
-            _apply_lock(pet)
+            _apply_lock(pet, state.turn)
             expire_temporary_buffs(pet, state.turn)
 
 
@@ -610,11 +612,14 @@ def _apply_dizzy(pet) -> None:
         )
 
 
-def _apply_lock(pet) -> None:
+def _apply_lock(pet, current_turn: int = 0) -> None:
+    """禁足按回合递减：施加当回合不递减，"3 回合"=接下来 3 个回合结束各减 1。"""
     if not has_buff(pet, BuffType.LOCK):
         return
     for buff in pet.buffs:
         if buff.buff_type == BuffType.LOCK:
+            if buff.applied_turn >= current_turn:
+                return
             buff.value -= 1
             if buff.value <= 0:
                 pet.buffs = [b for b in pet.buffs if b is not buff]
