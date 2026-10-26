@@ -84,6 +84,17 @@ def ppo_loss(
     }
 
 
+def auxiliary_loss(
+    predictions: dict[str, torch.Tensor],
+    targets: dict[str, torch.Tensor],
+) -> torch.Tensor:
+    damage = F.mse_loss(
+        predictions["damage_dealt"], targets["damage_dealt"]
+    ) + F.mse_loss(predictions["damage_taken"], targets["damage_taken"])
+    ko = F.binary_cross_entropy_with_logits(predictions["ko"], targets["ko"])
+    return damage + ko
+
+
 def opponent_cross_entropy(
     logits: torch.Tensor,
     actions: torch.Tensor,

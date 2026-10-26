@@ -3,6 +3,8 @@
 
 Run:
   python client.py --port 5000 --team data/teams/冻陨2.0.json
+  python client.py --port 5000 --team data/teams/冻陨2.0.json --auto best
+  python client.py --port 5000 --team data/teams/冻陨2.0.json --auto teacher
 """
 
 import argparse
@@ -31,6 +33,12 @@ LOG_FILES = []
 AUTO_MODE = False
 MACHINE_MODE = False
 MY_SIDE = None
+AUTO_AGENT = None
+AUTO_ENCODER = None
+AUTO_MODEL = None
+AUTO_TEACHER = None
+AUTO_DEVICE = None
+AUTO_MEMORIES = {"A": None, "B": None}
 
 # 元素 0-17 名称（与 sim/enums.Element 一致）
 ELEMENT_NAMES = [
@@ -609,12 +617,79 @@ def auto_replace(conn, state, side):
         send_line(conn, {"kind": "switch", "pet_index": idx})
 
 
+def init_auto_agent(kind, checkpoint):
+    global AUTO_ENCODER, AUTO_MODEL, AUTO_TEACHER, AUTO_DEVICE
+    from alpha_roco.features import ObservationEncoder
+
+    AUTO_ENCODER = ObservationEncoder()
+    if kind == "teacher":
+        from alpha_roco.teacher import Teacher
+
+        AUTO_TEACHER = Teacher(AUTO_ENCODER)
+        return
+    import torch
+
+    from alpha_roco.arena import load_model
+
+    AUTO_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.set_num_threads(1)
+    AUTO_MODEL = load_model(Path(checkpoint), AUTO_ENCODER, AUTO_DEVICE)
+
+
+def auto_agent_action(request):
+    if AUTO_AGENT == "teacher":
+        return AUTO_TEACHER.choose(request)
+    if AUTO_AGENT == "random":
+        candidates = [
+            candidate
+            for candidate in request.get("candidates", [])
+            if candidate.get("kind") != "flee"
+        ]
+        return random.choice(candidates)
+    from alpha_roco.arena import choose
+
+    action, AUTO_MEMORIES[request["side"]] = choose(
+        AUTO_MODEL,
+        AUTO_ENCODER,
+        request,
+        AUTO_MEMORIES[request["side"]],
+        AUTO_DEVICE,
+        sample=False,
+    )
+    return action
+
+
+def auto_lead(team, opponent_team):
+    if AUTO_AGENT == "random":
+        return random.randrange(len(team))
+    request = {
+        "side": MY_SIDE,
+        "phase": "lead",
+        "team": team,
+        "state": {"teams": {MY_SIDE: []}},
+        "candidates": [
+            {"kind": "lead", "lead": index, "pet_index": index}
+            for index in range(len(team))
+        ],
+        "opponent_team": opponent_team,
+    }
+    action = auto_agent_action(request)
+    return int(action.get("lead", action.get("pet_index", 0)))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Headless Roco 6v6 client")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5000)
     parser.add_argument("--nature", type=int, default=-1)
-    parser.add_argument("--auto", action="store_true")
+    parser.add_argument(
+        "--auto",
+        nargs="?",
+        const="best",
+        choices=("best", "teacher", "random"),
+        help="自动操作：best 使用 logs/az/best.pt，teacher 使用规则 teacher",
+    )
+    parser.add_argument("--checkpoint", default="logs/az/best.pt")
     parser.add_argument("--machine", action="store_true")
     parser.add_argument("--log-dir")
     parser.add_argument(
@@ -626,9 +701,12 @@ def main():
             "必须通过 --team 指定队伍文件，例如 --team data/teams/冻陨2.0.json"
         )
     # random.seed(42)
-    global AUTO_MODE, MACHINE_MODE
-    AUTO_MODE = args.auto
+    global AUTO_MODE, MACHINE_MODE, AUTO_AGENT
+    AUTO_MODE = bool(args.auto)
+    AUTO_AGENT = args.auto
     MACHINE_MODE = args.machine
+    if args.auto and args.auto != "random":
+        init_auto_agent(args.auto, args.checkpoint)
     team_data = load_team(args.team)
     team = team_data.get("team")
     resonance = team_data.get("resonance")
@@ -678,6 +756,7 @@ def main():
                     "nature": args.nature,
                     "team": team,
                     "resonance": resonance,
+                    "auto": args.auto,
                 },
             )
         elif msg_type == "choose_lead":
@@ -685,7 +764,7 @@ def main():
             if team is None:
                 lead = 0
             elif args.auto:
-                lead = random.randrange(len(team))
+                lead = auto_lead(team, opponent_team)
                 log(f"自动选择首发：{lead + 1}")
             else:
                 lead = choose_lead(team, opponent_team)
@@ -698,7 +777,21 @@ def main():
             MY_SIDE = my_side
             current_state = request["state"]
             team = request["team"]
-            if request["phase"] == "lead":
+            if args.auto:
+                action = auto_agent_action(request)
+                if request["phase"] == "lead":
+                    send_line(
+                        conn,
+                        {
+                            "lead": int(
+                                action.get("lead", action.get("pet_index", 0))
+                            )
+                        },
+                    )
+                else:
+                    awaiting_replacement = request["phase"] == "replacement"
+                    send_line(conn, action)
+            elif request["phase"] == "lead":
                 lead_line = terminal_input("选择首发编号 (1-based): ").strip()
                 send_line(conn, {"lead": int(lead_line) - 1})
             elif request["phase"] == "replacement":

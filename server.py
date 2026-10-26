@@ -52,6 +52,7 @@ def recv_line(f):
 
 LOG_FILES = []
 MACHINE_MODE = False
+AUTO_SIDES = set()
 
 
 def log(msg):
@@ -341,6 +342,11 @@ def main():
     team_b = raw_config_b.get("team") if raw_config_b else None
     resonance_a = raw_config_a.get("resonance") if raw_config_a else None
     resonance_b = raw_config_b.get("resonance") if raw_config_b else None
+    AUTO_SIDES.clear()
+    if raw_config_a and raw_config_a.get("auto"):
+        AUTO_SIDES.add("A")
+    if raw_config_b and raw_config_b.get("auto"):
+        AUTO_SIDES.add("B")
 
     if team_a is not None:
         validate_team_config(
@@ -357,16 +363,23 @@ def main():
     pets_a = make_team("A", team_a, spirits)
     pets_b = make_team("B", team_b, spirits)
 
-    if MACHINE_MODE:
-                send_decision(conn_a, None, "A", "lead", team_a, lead=True, opponent_team=[p.name for p in pets_b], own_pets=[pet_to_dict(pet) for pet in pets_a])
-                send_decision(conn_b, None, "B", "lead", team_b, lead=True, opponent_team=[p.name for p in pets_a], own_pets=[pet_to_dict(pet) for pet in pets_b])
-    else:
-        send_line(
-            conn_a, {"type": "choose_lead", "opponent_team": [p.name for p in pets_b]}
-        )
-        send_line(
-            conn_b, {"type": "choose_lead", "opponent_team": [p.name for p in pets_a]}
-        )
+    for side, conn, team, opponents, own in (
+        ("A", conn_a, team_a, [p.name for p in pets_b], [pet_to_dict(pet) for pet in pets_a]),
+        ("B", conn_b, team_b, [p.name for p in pets_a], [pet_to_dict(pet) for pet in pets_b]),
+    ):
+        if MACHINE_MODE or side in AUTO_SIDES:
+            send_decision(
+                conn,
+                None,
+                side,
+                "lead",
+                team,
+                lead=True,
+                opponent_team=opponents,
+                own_pets=own,
+            )
+        else:
+            send_line(conn, {"type": "choose_lead", "opponent_team": opponents})
     raw_lead_a = recv_line(f_a)
     raw_lead_b = recv_line(f_b)
     lead_a = raw_lead_a.get("lead", 0) if raw_lead_a else 0
@@ -376,15 +389,20 @@ def main():
     state.resonance_magic["A"] = resonance_a
     state.resonance_magic["B"] = resonance_b
 
-    send_line(conn_a, {"type": "state", "state": state_to_dict(state, view_side="A")})
-    send_line(conn_b, {"type": "state", "state": state_to_dict(state, view_side="B")})
+    if not MACHINE_MODE:
+        for side, conn in (("A", conn_a), ("B", conn_b)):
+            if side not in AUTO_SIDES:
+                send_line(
+                    conn,
+                    {"type": "state", "state": state_to_dict(state, view_side=side)},
+                )
 
     while state.winner is None:
         # 死亡后的换人不占用回合：先处理所有需要上场的替换
         replaced = False
         for side, conn, f in (("A", conn_a, f_a), ("B", conn_b, f_b)):
             if state.active[side] < 0:
-                if MACHINE_MODE:
+                if MACHINE_MODE or side in AUTO_SIDES:
                     send_decision(conn, state, side, "replacement", team_a if side == "A" else team_b)
                 else:
                     send_line(conn, {"type": "choose_replacement"})
@@ -395,22 +413,24 @@ def main():
                 record_submission(side, raw)
                 replaced = True
         else:
-            if replaced:
-                payload_a = {
-                    "type": "state",
-                    "state": state_to_dict(state, view_side="A"),
-                }
-                payload_b = {
-                    "type": "state",
-                    "state": state_to_dict(state, view_side="B"),
-                }
-                send_line(conn_a, payload_a)
-                send_line(conn_b, payload_b)
+            if replaced and not MACHINE_MODE:
+                for side, conn in (("A", conn_a), ("B", conn_b)):
+                    if side not in AUTO_SIDES:
+                        send_line(
+                            conn,
+                            {
+                                "type": "state",
+                                "state": state_to_dict(state, view_side=side),
+                            },
+                        )
 
             log(f"\n--- turn {state.turn} waiting actions ---")
-            if MACHINE_MODE:
-                send_decision(conn_a, state, "A", "action", team_a)
-                send_decision(conn_b, state, "B", "action", team_b)
+            for side, conn, team in (
+                ("A", conn_a, team_a),
+                ("B", conn_b, team_b),
+            ):
+                if MACHINE_MODE or side in AUTO_SIDES:
+                    send_decision(conn, state, side, "action", team)
             raw_a = read_action_with_energy(f_a, conn_a, state, "A")
             raw_b = read_action_with_energy(f_b, conn_b, state, "B")
             if raw_a is None or raw_b is None:
@@ -445,7 +465,7 @@ def main():
             while state.paused_turn is not None and state.winner is None:
                 lside = state.paused_turn["leave_side"]
                 lconn, lf = (conn_a, f_a) if lside == "A" else (conn_b, f_b)
-                if MACHINE_MODE:
+                if MACHINE_MODE or lside in AUTO_SIDES:
                     send_decision(lconn, state, lside, "replacement", team_a if lside == "A" else team_b)
                 else:
                     send_line(lconn, {"type": "choose_replacement"})
@@ -465,7 +485,7 @@ def main():
             for side, conn, f in (("A", conn_a, f_a), ("B", conn_b, f_b)):
                 if state.pending_switch[side]:
                     state.pending_switch[side] = False
-                    if MACHINE_MODE:
+                    if MACHINE_MODE or side in AUTO_SIDES:
                         send_decision(conn, state, side, "replacement", team_a if side == "A" else team_b)
                     else:
                         send_line(conn, {"type": "choose_replacement"})
@@ -476,16 +496,16 @@ def main():
                     record_submission(side, raw)
                     trait_switched = True
             else:
-                payload_a = {
-                    "type": "state",
-                    "state": state_to_dict(state, view_side="A"),
-                }
-                payload_b = {
-                    "type": "state",
-                    "state": state_to_dict(state, view_side="B"),
-                }
-                send_line(conn_a, payload_a)
-                send_line(conn_b, payload_b)
+                if not MACHINE_MODE:
+                    for side, conn in (("A", conn_a), ("B", conn_b)):
+                        if side not in AUTO_SIDES:
+                            send_line(
+                                conn,
+                                {
+                                    "type": "state",
+                                    "state": state_to_dict(state, view_side=side),
+                                },
+                            )
                 if trait_switched:
                     continue
 

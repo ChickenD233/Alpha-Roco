@@ -5,36 +5,56 @@ import dataclasses
 import hashlib
 import json
 import random
+import shutil
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import torch
 
-from alpha_roco.arena import TEAMS, load_model, play_match, wilson_interval
+from alpha_roco.arena import TEAMS, choose, load_model, play_match, wilson_interval
 from alpha_roco.config import ModelConfig
-from alpha_roco.features import ObservationEncoder, action_key, collate_inputs
+from alpha_roco.features import (
+    ObservationEncoder,
+    action_key,
+    collate_inputs,
+    selectable_candidates,
+)
 from alpha_roco.losses import (
+    auxiliary_loss,
     generalized_advantage,
     normalize_advantages,
     opponent_cross_entropy,
     ppo_loss,
-    terminal_rewards,
 )
 from alpha_roco.network import AlphaRoco
 from alpha_roco.report import write_table
+from alpha_roco.rewards import (
+    apply_event_bonus,
+    assign_rewards,
+    counter_bonus,
+    effective_bonus,
+    potential,
+    state_summary,
+)
 from alpha_roco.terminal import BattleSession
+from sim.data_loader import load_typechart
+from sim.skills.registry import static_of
+from sim.typechart import type_multiplier
+
+TYPE_CHART = load_typechart()
 
 
 @dataclass
 class TrainConfig:
     batches: int = 2
-    games_per_batch: int = 28
+    games_per_batch: int = 56
     ppo_epochs: int = 2
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
     seed: int = 0
     output: str = "logs/az"
-    learning_rate: float = 3e-4
+    learning_rate: float = 1e-4
     clip_ratio: float = 0.2
     value_coefficient: float = 0.5
     entropy_coefficient: float = 0.01
@@ -45,13 +65,15 @@ class TrainConfig:
     threads: int = 1
     log_games: bool = False
     keep_checkpoints: int = 1
-    eval_interval: int = 10
-    eval_games: int = 200
-    eval_workers: int = 4
-    probe_games: int = 0
-    probe_workers: int = 4
+    pool_size: int = 8
+    eval_interval: int = 8
+    eval_games: int = 256
+    eval_workers: int = 32
+    sample_workers: int = 16
+    update_chunk: int = 16
     promotion_threshold: float = 0.55
     elo_k: float = 32.0
+    aux_coefficient: float = 0.1
 
 
 def _masked_distribution(
@@ -84,11 +106,12 @@ def _sample_action(
     device: torch.device,
 ):
     item = encoder.encode(request)
+    summary = state_summary(request["state"], request["side"])
     with torch.no_grad():
         batch, output = _forward(model, encoder, item, memory, device)
         distribution = _masked_distribution(output["logits"], batch["action_mask"])
         action_index = distribution.sample()
-        action = request["candidates"][int(action_index.item())]
+        action = selectable_candidates(request)[int(action_index.item())]
         old_log_prob = float(distribution.log_prob(action_index).item())
         old_value = float(output["value"].reshape(-1)[0].item())
     return (
@@ -103,6 +126,9 @@ def _sample_action(
             "reward": 0.0,
             "terminal": False,
             "opponent_target": None,
+            "summary": summary,
+            "potential": potential(summary),
+            "event_bonus": 0.0,
         },
     )
 
@@ -117,6 +143,8 @@ def _paired_opponent_targets(
     if set(requests_by_side) != {"A", "B"}:
         return
     for side, request in requests_by_side.items():
+        if side not in entries_by_side:
+            continue
         other_side = "B" if side == "A" else "A"
         other_request = requests_by_side[other_side]
         if (
@@ -138,16 +166,80 @@ def _paired_opponent_targets(
             entries_by_side[side]["opponent_target"] = matches[0]
 
 
-def _collect_game(
+def _pet_elements(encoder: ObservationEncoder, pet: dict[str, Any]) -> list[int]:
+    if pet.get("attributes"):
+        return pet["attributes"]
+    species = encoder.spirit_by_name.get(
+        pet.get("name", "")
+    ) or encoder.spirit_by_id.get(str(pet.get("spirit_id", "")))
+    if species is None:
+        return []
+    return [species["mainElement"]] + (
+        [species["subElement"]] if species.get("subElement") is not None else []
+    )
+
+
+def _action_category(encoder: ObservationEncoder, action: dict[str, Any]) -> str:
+    if action.get("kind") == "charge":
+        return "status"
+    if action.get("kind") != "skill":
+        return ""
+    skill_id = action.get("skill_id")
+    if skill_id is None:
+        return ""
+    category = encoder.skill_by_id.get(str(skill_id), {}).get("category")
+    return {0: "attack", 1: "attack", 2: "defense", 3: "status"}.get(category, "")
+
+
+def _event_bonus(
     encoder: ObservationEncoder,
-    model: AlphaRoco,
+    request: dict[str, Any],
+    action: dict[str, Any],
+    opponent_action: dict[str, Any],
+) -> float:
+    if action.get("kind") != "skill" or action.get("skill_id") is None:
+        return 0.0
+    skill_id = int(action["skill_id"])
+    static = static_of(skill_id)
+    skill = encoder.skill_by_id.get(str(skill_id), {})
+    element = (
+        static["element"] if static["element"] is not None else skill.get("element")
+    )
+    bonus = 0.0
+    if (
+        skill.get("category") in (0, 1)
+        and skill.get("power") is not None
+        and element is not None
+    ):
+        state = request["state"]
+        enemy_side = "B" if request["side"] == "A" else "A"
+        active = state.get("active", {}).get(enemy_side, -1)
+        enemies = state.get("teams", {}).get(enemy_side, [])
+        if 0 <= active < len(enemies):
+            bonus += effective_bonus(
+                type_multiplier(
+                    element, _pet_elements(encoder, enemies[active]), TYPE_CHART
+                )
+            )
+    if static["counter_target"] and static["counter_target"] == _action_category(
+        encoder, opponent_action
+    ):
+        bonus += counter_bonus(True)
+    return bonus
+
+
+def _collect_versus_game(
+    encoder: ObservationEncoder,
+    candidate: AlphaRoco,
+    opponent: AlphaRoco,
     team_a: str,
     team_b: str,
     seed: int,
     device: torch.device,
     log_dir: Path | None = None,
+    gamma: float = 1.0,
 ) -> dict[str, Any]:
-    episodes: dict[str, list[dict[str, Any]]] = {"A": [], "B": []}
+    episode: list[dict[str, Any]] = []
     memories: dict[str, Any] = {"A": None, "B": None}
     with BattleSession(
         team_a=team_a,
@@ -163,37 +255,55 @@ def _collect_game(
             entries_by_side: dict[str, dict[str, Any]] = {}
             for request in requests:
                 side = request["side"]
-                action, memories[side], entry = _sample_action(
-                    model, encoder, request, memories[side], device
-                )
+                if side == "A":
+                    action, memories[side], entry = _sample_action(
+                        candidate, encoder, request, memories[side], device
+                    )
+                    episode.append(entry)
+                    entries_by_side[side] = entry
+                else:
+                    action, memories[side] = choose(
+                        opponent, encoder, request, memories[side], device, sample=False
+                    )
                 actions_by_side[side] = action
-                entries_by_side[side] = entry
-                episodes[side].append(entry)
             _paired_opponent_targets(
                 requests, actions_by_side, encoder, entries_by_side
             )
+            if "A" in entries_by_side and "B" in actions_by_side:
+                request_a = next(
+                    request for request in requests if request["side"] == "A"
+                )
+                entries_by_side["A"]["event_bonus"] = _event_bonus(
+                    encoder,
+                    request_a,
+                    actions_by_side["A"],
+                    actions_by_side["B"],
+                )
             for side, action in actions_by_side.items():
                 session.submit(side, action)
         winner = session.winner
     if winner not in {"A", "B", "both_lose"}:
         raise RuntimeError(f"对局未得到有效终局结果：{winner!r}")
-    rewards = terminal_rewards(winner)
-    for index, side in enumerate(("A", "B")):
-        if not episodes[side]:
-            raise RuntimeError(f"{side}方本局没有决策记录")
-        episodes[side][0]["reward"] = rewards[index]
-        episodes[side][0]["terminal"] = True
-        battle_entries = [
-            entry for entry in episodes[side] if entry["phase"] != "lead"
-        ]
-        if battle_entries:
-            battle_entries[-1]["reward"] = rewards[index]
-            battle_entries[-1]["terminal"] = True
-    return {
-        "episodes": episodes,
-        "winner": winner,
-        "rewards": dict(zip(("A", "B"), rewards, strict=True)),
-    }
+    if not episode:
+        raise RuntimeError("candidate方本局没有决策记录")
+    assign_rewards(episode, winner, gamma)
+    apply_event_bonus(episode)
+    _assign_aux_targets(episode)
+    return {"episode": episode, "winner": winner}
+
+
+def _assign_aux_targets(episode: list[dict[str, Any]]) -> None:
+    battle_entries = [entry for entry in episode if entry["phase"] != "lead"]
+    for entry, following in zip(battle_entries, battle_entries[1:]):
+        before, after = entry["summary"], following["summary"]
+        entry["aux_target"] = {
+            "damage_dealt": max(0.0, before["enemy_hp"] - after["enemy_hp"]),
+            "damage_taken": max(0.0, before["own_hp"] - after["own_hp"]),
+            "ko": [
+                float(after["enemy_alive"] < before["enemy_alive"]),
+                float(after["own_alive"] < before["own_alive"]),
+            ],
+        }
 
 
 def _prepare_advantages(
@@ -263,6 +373,40 @@ def _replay_episode(
         yield entry, batch, output
 
 
+def _batched_episode_steps(
+    model: AlphaRoco,
+    episodes: list[list[dict[str, Any]]],
+    device: torch.device,
+):
+    memories = [None] * len(episodes)
+    max_steps = max((len(episode) for episode in episodes), default=0)
+    for step in range(max_steps):
+        active = [
+            index for index, episode in enumerate(episodes) if step < len(episode)
+        ]
+        if not active:
+            break
+        batch = collate_inputs(
+            [episodes[index][step]["item"] for index in active], device
+        )
+        memory = (
+            None
+            if step == 0
+            else (
+                torch.cat([memories[index][0] for index in active], dim=1),
+                torch.cat([memories[index][1] for index in active], dim=1),
+            )
+        )
+        output = model(batch, memory=memory)
+        next_memory = output["memory"]
+        for position, index in enumerate(active):
+            memories[index] = (
+                next_memory[0][:, position : position + 1],
+                next_memory[1][:, position : position + 1],
+            )
+        yield step, active, batch, output
+
+
 def _policy_update(
     model: AlphaRoco,
     optimizer: torch.optim.Optimizer,
@@ -282,38 +426,103 @@ def _policy_update(
         "entropy": 0.0,
         "kl": 0.0,
         "clip_fraction": 0.0,
+        "aux": 0.0,
         "grad_norm": 0.0,
     }
+    aux_count = sum(
+        1
+        for episode in episodes
+        for entry in episode
+        if entry.get("aux_target") is not None
+    )
     completed_epochs = 0
     for _ in range(ppo_epochs):
         optimizer.zero_grad(set_to_none=True)
         sums = {
-            key: 0.0 for key in ("policy", "value", "entropy", "kl", "clip_fraction")
+            key: 0.0
+            for key in ("policy", "value", "entropy", "kl", "clip_fraction", "aux")
         }
-        for episode in episodes:
-            episode_outputs = _replay_episode(model, encoder, episode, device)
-            episode_losses: list[torch.Tensor] = []
-            for entry, batch, output in episode_outputs:
-                phase = "lead" if entry["phase"] == "lead" else "battle"
-                result = ppo_loss(
-                    output["logits"],
-                    torch.tensor([entry["action"]], device=device),
-                    torch.tensor([entry["old_log_prob"]], device=device),
-                    entry["advantage"].reshape(1),
-                    output["value"].reshape(-1),
-                    entry["return"].reshape(1),
-                    batch["action_mask"],
-                    config.clip_ratio,
-                    config.value_coefficient,
-                    config.entropy_coefficient,
-                )
-                episode_losses.append(result["loss"] / max(counts[phase], 1))
-                for key in sums:
-                    sums[key] += float(result[key].detach().item()) / max(
-                        counts[phase], 1
+        for start in range(0, len(episodes), config.update_chunk):
+            chunk = episodes[start : start + config.update_chunk]
+            losses: list[torch.Tensor] = []
+            for step, active, batch, output in _batched_episode_steps(
+                model, chunk, device
+            ):
+                entries = [chunk[index][step] for index in active]
+                phases = [
+                    "lead" if entry["phase"] == "lead" else "battle"
+                    for entry in entries
+                ]
+                for phase in ("lead", "battle"):
+                    positions = [
+                        position
+                        for position, value in enumerate(phases)
+                        if value == phase
+                    ]
+                    if not positions:
+                        continue
+                    selected = [entries[position] for position in positions]
+                    result = ppo_loss(
+                        output["logits"][positions],
+                        torch.tensor(
+                            [entry["action"] for entry in selected], device=device
+                        ),
+                        torch.tensor(
+                            [entry["old_log_prob"] for entry in selected],
+                            device=device,
+                        ),
+                        torch.stack([entry["advantage"] for entry in selected]),
+                        output["value"][positions].reshape(-1),
+                        torch.stack([entry["return"] for entry in selected]),
+                        batch["action_mask"][positions],
+                        config.clip_ratio,
+                        config.value_coefficient,
+                        config.entropy_coefficient,
                     )
-            if episode_losses:
-                torch.stack(episode_losses).sum().backward()
+                    scale = len(positions) / max(counts[phase], 1)
+                    losses.append(result["loss"] * scale)
+                    for key in (
+                        "policy",
+                        "value",
+                        "entropy",
+                        "kl",
+                        "clip_fraction",
+                    ):
+                        sums[key] += float(result[key].detach().item()) * scale
+                aux_positions = [
+                    position
+                    for position, entry in enumerate(entries)
+                    if entry.get("aux_target") is not None
+                ]
+                if aux_positions:
+                    targets = [
+                        entries[position]["aux_target"] for position in aux_positions
+                    ]
+                    aux = auxiliary_loss(
+                        {
+                            key: value[aux_positions]
+                            for key, value in output["aux"].items()
+                        },
+                        {
+                            "damage_dealt": torch.tensor(
+                                [target["damage_dealt"] for target in targets],
+                                device=device,
+                            ),
+                            "damage_taken": torch.tensor(
+                                [target["damage_taken"] for target in targets],
+                                device=device,
+                            ),
+                            "ko": torch.tensor(
+                                [target["ko"] for target in targets],
+                                device=device,
+                            ),
+                        },
+                    )
+                    scale = len(aux_positions) / max(aux_count, 1)
+                    losses.append(aux * config.aux_coefficient * scale)
+                    sums["aux"] += float(aux.detach().item()) * scale
+            if losses:
+                torch.stack(losses).sum().backward()
         norm = torch.nn.utils.clip_grad_norm_(
             model.policy_parameters(), config.max_grad_norm
         )
@@ -350,21 +559,29 @@ def _opponent_update(
     )
     optimizer.zero_grad(set_to_none=True)
     loss_sum = 0.0
-    for episode in episodes:
+    for start in range(0, len(episodes), config.update_chunk):
+        chunk = episodes[start : start + config.update_chunk]
         losses = []
-        for entry, batch, output in _replay_episode(model, encoder, episode, device):
-            target = entry["opponent_target"]
-            if target is None:
+        for step, active, batch, output in _batched_episode_steps(model, chunk, device):
+            targets = [chunk[index][step]["opponent_target"] for index in active]
+            positions = [
+                position
+                for position, target in enumerate(targets)
+                if target is not None
+            ]
+            if not positions:
                 continue
             loss = opponent_cross_entropy(
-                output["opponent_logits"],
-                torch.tensor([target], device=device),
-                batch["opponent_mask"],
+                output["opponent_logits"][positions],
+                torch.tensor(
+                    [targets[position] for position in positions], device=device
+                ),
+                batch["opponent_mask"][positions],
             )
             if not bool(torch.isfinite(loss).all()):
                 raise FloatingPointError("对手交叉熵出现非有限值")
-            loss_sum += float(loss.detach().item())
-            losses.append(loss / max(target_count, 1))
+            loss_sum += float(loss.detach().item()) * len(positions)
+            losses.append(loss * len(positions) / max(target_count, 1))
         if losses:
             torch.stack(losses).sum().backward()
     norm = torch.nn.utils.clip_grad_norm_(
@@ -390,8 +607,7 @@ def _checkpoint(
     batch_index: int,
     games_seen: int,
     best_batch: int,
-    best_elo_a: float,
-    best_elo_b: float,
+    best_elo: float,
     overwrite: bool = False,
 ) -> None:
     if path.exists() and not overwrite:
@@ -417,8 +633,7 @@ def _checkpoint(
         "next_batch": batch_index + 1,
         "games_seen": games_seen,
         "best_batch": best_batch,
-        "best_elo_a": best_elo_a,
-        "best_elo_b": best_elo_b,
+        "best_elo": best_elo,
         "rng": {
             "python": random.getstate(),
             "torch_cpu": torch.get_rng_state(),
@@ -468,12 +683,108 @@ def _restore(
 
 
 def _clone_model(
-    model: AlphaRoco, model_config: ModelConfig, encoder: ObservationEncoder, device: torch.device
+    model: AlphaRoco,
+    model_config: ModelConfig,
+    encoder: ObservationEncoder,
+    device: torch.device,
 ) -> AlphaRoco:
     clone = AlphaRoco(config=model_config, vocab_sizes=encoder.vocab_sizes).to(device)
     clone.load_state_dict(model.state_dict())
     clone.eval()
     return clone
+
+
+def _load_pool(
+    pool_dir: Path, encoder: ObservationEncoder, device: torch.device, size: int
+) -> list[tuple[str, AlphaRoco]]:
+    paths = sorted(pool_dir.glob("best-batch-*.pt"))
+    for stale in paths[:-size]:
+        stale.unlink()
+    return [(path.name, load_model(path, encoder, device)) for path in paths[-size:]]
+
+
+def _sample_opponent(
+    best_model: AlphaRoco,
+    pool: list[tuple[str, AlphaRoco]],
+    stats: dict[str, dict[str, int]],
+) -> tuple[str, AlphaRoco]:
+    if not pool or random.random() < 0.5:
+        return "current", best_model
+    weights = []
+    for name, _ in pool:
+        record = stats.get(name, {})
+        rate = record["wins"] / record["games"] if record.get("games") else 0.5
+        weights.append(1.0 if 0.2 <= rate <= 0.8 else 0.2)
+    return random.choices(pool, weights=weights, k=1)[0]
+
+
+def _collect_batch(
+    encoder: ObservationEncoder,
+    candidate: AlphaRoco,
+    best_model: AlphaRoco,
+    pool: list[tuple[str, AlphaRoco]],
+    pool_stats: dict[str, dict[str, int]],
+    first_game: int,
+    device: torch.device,
+    config: TrainConfig,
+    output: Path,
+) -> list[tuple[int, str, dict[str, Any]]]:
+    tasks = []
+    for offset in range(config.games_per_batch):
+        game_index = first_game + offset
+        game_seed = random.randrange(2**32)
+        opponent_name, opponent_model = _sample_opponent(best_model, pool, pool_stats)
+        game_log_dir = (
+            output / "games" / f"game-{game_index:06d}-seed-{game_seed}"
+            if config.log_games
+            else None
+        )
+        if game_log_dir is not None:
+            game_log_dir.mkdir(parents=True, exist_ok=True)
+        tasks.append(
+            (
+                game_index,
+                opponent_name,
+                opponent_model,
+                random.choice(TEAMS),
+                random.choice(TEAMS),
+                game_seed,
+                game_log_dir,
+            )
+        )
+
+    def collect(task):
+        (
+            game_index,
+            opponent_name,
+            opponent_model,
+            team_a,
+            team_b,
+            game_seed,
+            log_dir,
+        ) = task
+        return (
+            game_index,
+            opponent_name,
+            _collect_versus_game(
+                encoder,
+                candidate,
+                opponent_model,
+                team_a,
+                team_b,
+                game_seed,
+                device,
+                log_dir=log_dir,
+                gamma=config.gamma,
+            ),
+        )
+
+    if config.sample_workers == 1:
+        return [collect(task) for task in tasks]
+    with ThreadPoolExecutor(
+        max_workers=min(config.sample_workers, config.games_per_batch)
+    ) as executor:
+        return list(executor.map(collect, tasks))
 
 
 def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
@@ -482,18 +793,20 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
         or config.games_per_batch < 1
         or config.ppo_epochs < 1
         or config.keep_checkpoints < 1
+        or config.sample_workers < 1
+        or config.update_chunk < 1
     ):
-        raise ValueError("batches、games-per-batch、ppo-epochs与keep-checkpoints必须为正数")
-    if config.eval_interval < 0:
-        raise ValueError("eval-interval不能为负数")
-    if config.eval_interval > 0 and config.eval_games < 2:
+        raise ValueError(
+            "batches、games-per-batch、ppo-epochs、sample-workers、update-chunk与keep-checkpoints必须为正数"
+        )
+    if config.eval_interval < 1:
+        raise ValueError("eval-interval必须为正数")
+    if config.eval_games < 2:
         raise ValueError("eval-games至少为2")
     if config.eval_workers < 1:
         raise ValueError("eval-workers必须为正数")
-    if config.probe_games > 0 and config.probe_games < 2:
-        raise ValueError("probe-games至少为2")
-    if config.probe_workers < 1:
-        raise ValueError("probe-workers必须为正数")
+    if config.pool_size < 1:
+        raise ValueError("pool-size必须为正数")
     if not 0 <= config.promotion_threshold <= 1:
         raise ValueError("promotion-threshold必须在[0,1]内")
     random.seed(config.seed)
@@ -518,17 +831,20 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
         config = dataclasses.replace(
             saved_config,
             batches=config.batches,
+            games_per_batch=config.games_per_batch,
             ppo_epochs=config.ppo_epochs,
+            aux_coefficient=config.aux_coefficient,
             device=config.device,
             output=config.output,
             threads=config.threads,
             log_games=config.log_games,
             keep_checkpoints=config.keep_checkpoints,
+            pool_size=config.pool_size,
             eval_interval=config.eval_interval,
             eval_games=config.eval_games,
             eval_workers=config.eval_workers,
-            probe_games=config.probe_games,
-            probe_workers=config.probe_workers,
+            sample_workers=config.sample_workers,
+            update_chunk=config.update_chunk,
             promotion_threshold=config.promotion_threshold,
         )
     model = AlphaRoco(config=model_config, vocab_sizes=encoder.vocab_sizes).to(device)
@@ -541,11 +857,13 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
     first_batch = 0
     games_seen = 0
     best_batch = 0
-    best_elo_a = 0.0
-    best_elo_b = 0.0
+    best_elo = 0.0
     output = Path(config.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     best_path = output / "best.pt"
+    pool_dir = output / "pool"
+    pool_dir.mkdir(parents=True, exist_ok=True)
+    pool_stats_path = output / "pool_stats.json"
     if resume is not None:
         checkpoint, first_batch, games_seen = _restore(
             checkpoint, model, optimizers, encoder, device
@@ -554,8 +872,7 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
         best_model = load_model(best_path, encoder, device)
         best_checkpoint = torch.load(best_path, map_location="cpu", weights_only=False)
         best_batch = int(best_checkpoint["best_batch"])
-        best_elo_a = float(best_checkpoint["best_elo_a"])
-        best_elo_b = float(best_checkpoint["best_elo_b"])
+        best_elo = float(best_checkpoint["best_elo"])
     else:
         best_model = _clone_model(model, model_config, encoder, device)
         if resume is not None:
@@ -570,39 +887,44 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
             first_batch - 1,
             games_seen,
             best_batch,
-            best_elo_a,
-            best_elo_b,
+            best_elo,
             overwrite=True,
         )
+    pool = _load_pool(pool_dir, encoder, device, config.pool_size)
+    pool_stats = (
+        json.loads(pool_stats_path.read_text(encoding="utf-8"))
+        if pool_stats_path.exists()
+        else {}
+    )
+    pool_stats = {
+        name: record
+        for name, record in pool_stats.items()
+        if name == "current" or name in {pool_name for pool_name, _ in pool}
+    }
     saved_paths = []
     for batch_index in range(first_batch, first_batch + config.batches):
         batch_number = batch_index + 1
         print(f"batch={batch_number} sampling={config.games_per_batch}", flush=True)
         episodes: list[list[dict[str, Any]]] = []
-        winners = {"A": 0, "B": 0, "both_lose": 0}
-        for _ in range(config.games_per_batch):
-            game_index = games_seen
-            game_seed = random.randrange(2**32)
-            game_log_dir = (
-                output / "games" / f"game-{game_index:06d}-seed-{game_seed}"
-                if config.log_games
-                else None
-            )
-            if game_log_dir is not None:
-                game_log_dir.mkdir(parents=True, exist_ok=True)
-            result = _collect_game(
-                encoder,
-                model,
-                random.choice(TEAMS),
-                random.choice(TEAMS),
-                game_seed,
-                device,
-                log_dir=game_log_dir,
-            )
-            episodes.append(result["episodes"]["A"])
-            episodes.append(result["episodes"]["B"])
-            winners[result["winner"]] += 1
-            games_seen += 1
+        both_lose = 0
+        results = _collect_batch(
+            encoder,
+            model,
+            best_model,
+            pool,
+            pool_stats,
+            games_seen,
+            device,
+            config,
+            output,
+        )
+        for _, opponent_name, result in results:
+            episodes.append(result["episode"])
+            both_lose += result["winner"] == "both_lose"
+            record = pool_stats.setdefault(opponent_name, {"wins": 0, "games": 0})
+            record["games"] += 1
+            record["wins"] += result["winner"] == "A"
+        games_seen += config.games_per_batch
         policy_metrics = _policy_update(
             model,
             optimizers["policy"],
@@ -621,9 +943,7 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
             device,
         )
         if not torch.isfinite(
-            torch.tensor(
-                [*policy_metrics.values(), *opponent_metrics.values()]
-            )
+            torch.tensor([*policy_metrics.values(), *opponent_metrics.values()])
         ).all():
             raise FloatingPointError("训练批次指标出现非有限值，拒绝保存")
         if policy_metrics["grad_norm"] <= 0:
@@ -643,38 +963,24 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
             batch_index,
             games_seen,
             best_batch,
-            best_elo_a,
-            best_elo_b,
+            best_elo,
         )
         saved_paths.append(checkpoint_path)
         for stale_path in sorted(output.glob("checkpoint-batch-*.pt"))[
             : -config.keep_checkpoints
         ]:
             stale_path.unlink()
-        probe_record = None
-        probe_best_batch = best_batch
-        if config.probe_games > 0:
-            model.eval()
-            probe_tallies = play_match(
-                model,
-                best_model,
-                encoder,
-                config.probe_games,
-                config.seed + 1_000_000 + batch_number,
-                device,
-                sample=False,
-                workers=config.probe_workers,
-            )
-            model.train()
-            probe_record = {
-                side: probe_tallies[side]["win"] / sum(probe_tallies[side].values())
-                for side in ("A", "B")
-            }
-        eval_record = None
+        evaluated = (
+            batch_number % config.eval_interval == 0
+            or batch_index == first_batch + config.batches - 1
+        )
+        rate = None
+        reference_batch = best_batch
+        elo = best_elo
         promoted = False
-        if config.eval_interval > 0 and batch_number % config.eval_interval == 0:
+        if evaluated:
             model.eval()
-            tallies = play_match(
+            tally = play_match(
                 model,
                 best_model,
                 encoder,
@@ -685,23 +991,24 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
                 workers=config.eval_workers,
             )
             model.train()
-            rates = {
-                side: tallies[side]["win"] / sum(tallies[side].values())
-                for side in ("A", "B")
-            }
-            intervals = {
-                side: wilson_interval(
-                    tallies[side]["win"], sum(tallies[side].values())
-                )
-                for side in ("A", "B")
-            }
-            elo_a = best_elo_a + config.elo_k * (rates["A"] - 0.5)
-            elo_b = best_elo_b + config.elo_k * (rates["B"] - 0.5)
-            promoted = min(rates.values()) > config.promotion_threshold
+            rate = tally["win"] / sum(tally.values())
+            interval = wilson_interval(tally["win"], sum(tally.values()))
+            elo = best_elo + config.elo_k * (rate - 0.5)
+            promoted = rate > config.promotion_threshold
             if promoted:
+                snapshot = pool_dir / f"best-batch-{reference_batch:06d}.pt"
+                if not snapshot.exists():
+                    shutil.copy2(best_path, snapshot)
+                if snapshot.name not in {name for name, _ in pool}:
+                    pool.append((snapshot.name, load_model(snapshot, encoder, device)))
+                if "current" in pool_stats:
+                    pool_stats[snapshot.name] = pool_stats.pop("current")
+                while len(pool) > config.pool_size:
+                    name, _ = pool.pop(0)
+                    (pool_dir / name).unlink(missing_ok=True)
+                    pool_stats.pop(name, None)
                 best_batch = batch_number
-                best_elo_a = elo_a
-                best_elo_b = elo_b
+                best_elo = elo
                 _checkpoint(
                     best_path,
                     model,
@@ -712,8 +1019,7 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
                     batch_index,
                     games_seen,
                     best_batch,
-                    best_elo_a,
-                    best_elo_b,
+                    best_elo,
                     overwrite=True,
                 )
                 best_model.load_state_dict(model.state_dict())
@@ -721,78 +1027,45 @@ def run(config: TrainConfig, resume: Path | None = None) -> list[Path]:
             eval_record = {
                 "batch": batch_number,
                 "games": config.eval_games,
-                "candidate_side_A": {
-                    **tallies["A"],
-                    "win_rate": rates["A"],
-                    "ci95": list(intervals["A"]),
-                    "elo": elo_a,
-                },
-                "candidate_side_B": {
-                    **tallies["B"],
-                    "win_rate": rates["B"],
-                    "ci95": list(intervals["B"]),
-                    "elo": elo_b,
-                },
+                "reference_batch": reference_batch,
+                "win": tally["win"],
+                "loss": tally["loss"],
+                "both_lose": tally["both_lose"],
+                "win_rate": rate,
+                "ci95": list(interval),
+                "elo": elo,
                 "promoted": promoted,
                 "best_batch": best_batch,
-                "best_elo_a": best_elo_a,
-                "best_elo_b": best_elo_b,
+                "best_elo": best_elo,
             }
             with (output / "eval.jsonl").open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(eval_record, ensure_ascii=False) + "\n")
-            print(
-                f"eval batch={batch_number} games={config.eval_games} "
-                f"A={rates['A']:.3f} [{intervals['A'][0]:.3f},{intervals['A'][1]:.3f}] "
-                f"B={rates['B']:.3f} [{intervals['B'][0]:.3f},{intervals['B'][1]:.3f}] "
-                f"elo_A={elo_a:.1f} elo_B={elo_b:.1f} "
-                f"promoted={promoted} best_batch={best_batch}",
-                flush=True,
-            )
+            write_table(output / "eval.jsonl", output / "eval_table.md")
         record = {
             "batch": batch_number,
-            "games": config.games_per_batch,
-            "games_seen": games_seen,
-            "probe_games": config.probe_games if probe_record else 0,
-            "probe_A": probe_record["A"] if probe_record else None,
-            "probe_B": probe_record["B"] if probe_record else None,
-            "probe_best_batch": probe_best_batch if probe_record else None,
-            "wins_A": winners["A"],
-            "wins_B": winners["B"],
-            "both_lose": winners["both_lose"],
-            "policy_loss": policy_metrics["policy"],
-            "value_loss": policy_metrics["value"],
-            "entropy": policy_metrics["entropy"],
-            "kl": policy_metrics["kl"],
-            "clip_fraction": policy_metrics["clip_fraction"],
-            "grad_norm": policy_metrics["grad_norm"],
-            "epochs": policy_metrics["epochs"],
-            "opponent_ce": opponent_metrics["opponent_ce"],
-            "opponent_grad_norm": opponent_metrics["opponent_grad_norm"],
-            "opponent_samples": opponent_metrics["opponent_samples"],
-            "eval_A": eval_record["candidate_side_A"]["win_rate"]
-            if eval_record
-            else None,
-            "eval_B": eval_record["candidate_side_B"]["win_rate"]
-            if eval_record
-            else None,
+            "eval_win_rate": rate,
             "promoted": promoted,
             "best_batch": best_batch,
+            "entropy": policy_metrics["entropy"],
+            "kl": policy_metrics["kl"],
+            "value_loss": policy_metrics["value"],
+            "aux_loss": policy_metrics["aux"],
+            "opponent_ce": opponent_metrics["opponent_ce"],
+            "both_lose_rate": both_lose / config.games_per_batch,
         }
         with (output / "metrics.jsonl").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-        if config.probe_games > 0:
-            write_table(output / "metrics.jsonl", output / "probe_table.md")
+        pool_stats_path.write_text(
+            json.dumps(pool_stats, ensure_ascii=False), encoding="utf-8"
+        )
+        eval_text = "-" if rate is None else f"{rate:.3f}"
         print(
-            f"batch={batch_number} games={config.games_per_batch} "
-            f"wins_A={winners['A']} wins_B={winners['B']} "
-            f"both_lose={winners['both_lose']} "
-            f"policy={policy_metrics['policy']:.4f} "
-            f"value={policy_metrics['value']:.4f} "
-            f"entropy={policy_metrics['entropy']:.4f} "
-            f"kl={policy_metrics['kl']:.4f} "
-            f"epochs={int(policy_metrics['epochs'])} "
-            f"opp_ce={opponent_metrics['opponent_ce']:.4f} "
-            f"best_batch={best_batch} saved={checkpoint_path}",
+            f"batch={batch_number} eval_win_rate={eval_text} promoted={promoted} "
+            f"best_batch={best_batch} entropy={record['entropy']:.4f} "
+            f"kl={record['kl']:.4f} value={record['value_loss']:.4f} "
+            f"aux={record['aux_loss']:.4f} "
+            f"opp_ce={record['opponent_ce']:.4f} "
+            f"both_lose_rate={record['both_lose_rate']:.3f}",
             flush=True,
         )
     return saved_paths
@@ -803,7 +1076,7 @@ def _parse_args() -> tuple[TrainConfig, Path | None]:
         description="使用真实对局训练Alpha Roco recurrent PPO"
     )
     parser.add_argument("--batches", type=int, default=2)
-    parser.add_argument("--games-per-batch", type=int, default=28)
+    parser.add_argument("--games-per-batch", type=int, default=56)
     parser.add_argument("--ppo-epochs", type=int, default=2)
     parser.add_argument("--device", choices=("cpu", "cuda"), default=None)
     parser.add_argument("--seed", type=int, default=0)
@@ -811,12 +1084,14 @@ def _parse_args() -> tuple[TrainConfig, Path | None]:
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--log-games", action="store_true")
     parser.add_argument("--keep-checkpoints", type=int, default=1)
-    parser.add_argument("--eval-interval", type=int, default=10)
-    parser.add_argument("--eval-games", type=int, default=200)
-    parser.add_argument("--eval-workers", type=int, default=4)
-    parser.add_argument("--probe-games", type=int, default=0)
-    parser.add_argument("--probe-workers", type=int, default=4)
+    parser.add_argument("--pool-size", type=int, default=8)
+    parser.add_argument("--eval-interval", type=int, default=8)
+    parser.add_argument("--eval-games", type=int, default=256)
+    parser.add_argument("--eval-workers", type=int, default=32)
+    parser.add_argument("--sample-workers", type=int, default=16)
+    parser.add_argument("--update-chunk", type=int, default=16)
     parser.add_argument("--promotion-threshold", type=float, default=0.55)
+    parser.add_argument("--aux-coefficient", type=float, default=0.1)
     parser.add_argument("--resume", type=Path)
     args = parser.parse_args()
     return (
@@ -830,12 +1105,14 @@ def _parse_args() -> tuple[TrainConfig, Path | None]:
             threads=args.threads,
             log_games=args.log_games,
             keep_checkpoints=args.keep_checkpoints,
+            pool_size=args.pool_size,
             eval_interval=args.eval_interval,
             eval_games=args.eval_games,
             eval_workers=args.eval_workers,
-            probe_games=args.probe_games,
-            probe_workers=args.probe_workers,
+            sample_workers=args.sample_workers,
+            update_chunk=args.update_chunk,
             promotion_threshold=args.promotion_threshold,
+            aux_coefficient=args.aux_coefficient,
         ),
         args.resume,
     )

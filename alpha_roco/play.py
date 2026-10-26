@@ -20,7 +20,9 @@ def main():
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--random-init", action="store_true")
     parser.add_argument("--sample", action="store_true")
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--timeout", type=float, default=20)
     parser.add_argument("--log-dir", type=Path)

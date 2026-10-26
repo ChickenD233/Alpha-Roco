@@ -29,7 +29,13 @@ def candidate_commands(request: dict, action: dict) -> list[str]:
             commands.append(str(action.get("magic_branch", 0) + 1))
     if action["kind"] == "skill":
         commands.append(str(action["skill_index"] + 1))
-        choices = [candidate for candidate in request["candidates"] if candidate["kind"] == "skill" and candidate.get("skill_index") == action["skill_index"] and candidate.get("magic_id") == action.get("magic_id")]
+        choices = [
+            candidate
+            for candidate in request["candidates"]
+            if candidate["kind"] == "skill"
+            and candidate.get("skill_index") == action["skill_index"]
+            and candidate.get("magic_id") == action.get("magic_id")
+        ]
         if any(candidate.get("choice_branch") == 1 for candidate in choices):
             commands.append(str(action.get("choice_branch", 0)))
     elif action["kind"] == "charge":
@@ -119,7 +125,9 @@ class BattleSession:
         ready_message = json.loads(ready)
         port = ready_message["port"]
         for side, team in (("A", self.team_a), ("B", self.team_b)):
-            self._stderr_files.append((battle_logs / f"client-{side}.stderr.log").open("w", encoding="utf-8"))
+            self._stderr_files.append(
+                (battle_logs / f"client-{side}.stderr.log").open("w", encoding="utf-8")
+            )
             process = subprocess.Popen(
                 [
                     sys.executable,
@@ -161,7 +169,9 @@ class BattleSession:
                     raise TimeoutError(f"client {side} 未及时确认服务端席位")
                 chunk = os.read(process.stdout.fileno(), 65536)
                 if not chunk:
-                    raise RuntimeError(f"client {side} 在确认席位前退出：{self._stderr_detail(side)}")
+                    raise RuntimeError(
+                        f"client {side} 在确认席位前退出：{self._stderr_detail(side)}"
+                    )
                 self._buffers[side] += chunk
         raw, self._buffers[side] = self._buffers[side].split(b"\n", 1)
         welcome = json.loads(raw)
@@ -200,7 +210,9 @@ class BattleSession:
                     return None, None
                 if message.get("type") == "protocol_error":
                     self._write_log(message)
-                    raise RuntimeError(f"client {side} rejected submitted action: {message}")
+                    raise RuntimeError(
+                        f"client {side} rejected submitted action: {message}"
+                    )
                 if message.get("type") == "decision":
                     request = message["request"]
                     self.requests_by_side[request["side"]] = request
@@ -216,7 +228,9 @@ class BattleSession:
                 process = self.clients[side]
                 if process.poll() is not None:
                     detail = self._stderr_detail(side)
-                    raise RuntimeError(f"client {side} exited with {process.returncode}: {detail}")
+                    raise RuntimeError(
+                        f"client {side} exited with {process.returncode}: {detail}"
+                    )
                 continue
             self._buffers[side] += chunk
             while b"\n" in self._buffers[side]:
@@ -229,8 +243,16 @@ class BattleSession:
         path = self.requested_log_dir
         if path is None:
             path = Path(self._temporary.name) / "logs"
-        files = [path / f"client-{side}.stderr.log", path / "server.stderr.log", path / "server.log"]
-        return " | ".join(f"{file.name}: {file.read_text(encoding='utf-8')[-1200:]}" for file in files if file.is_file())
+        files = [
+            path / f"client-{side}.stderr.log",
+            path / "server.stderr.log",
+            path / "server.log",
+        ]
+        return " | ".join(
+            f"{file.name}: {file.read_text(encoding='utf-8')[-1200:]}"
+            for file in files
+            if file.is_file()
+        )
 
     def requests(self) -> list[dict]:
         """Collect the current decision group, blocking until it is available."""
@@ -282,7 +304,12 @@ class BattleSession:
         client.stdin.flush()
         self.requests_by_side.pop(side)
         self._write_log(
-            {"type": "submit", "side": side, "phase": request["phase"], "action": action}
+            {
+                "type": "submit",
+                "side": side,
+                "phase": request["phase"],
+                "action": action,
+            }
         )
 
     def close(self):

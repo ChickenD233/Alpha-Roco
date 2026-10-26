@@ -12,15 +12,13 @@ def write_table(input_path: Path, output_path: Path | None = None) -> str:
         if line.strip()
     ]
     lines = [
-        "| 批次 | 对局数 | A侧胜率 | B侧胜率 | 对比的best批次 |",
-        "|---:|---:|---:|---:|---:|",
+        "| 批次 | 对局数 | 胜率 | 对比的best批次 |",
+        "|---:|---:|---:|---:|",
     ]
     for row in rows:
-        if row.get("probe_A") is None:
-            continue
         lines.append(
-            f"| {row['batch']} | {row['probe_games']} | {row['probe_A']:.3f} | "
-            f"{row['probe_B']:.3f} | {row['probe_best_batch']} |"
+            f"| {row['batch']} | {row['games']} | "
+            f"{row['win_rate']:.3f} | {row['reference_batch']} |"
         )
     table = "\n".join(lines) + "\n"
     if output_path is not None:
@@ -30,7 +28,7 @@ def write_table(input_path: Path, output_path: Path | None = None) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="生成逐批对best胜率表")
-    parser.add_argument("--input", type=Path, default=Path("logs/az/metrics.jsonl"))
+    parser.add_argument("--input", type=Path, default=Path("logs/az/eval.jsonl"))
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     print(write_table(args.input, args.output), end="")

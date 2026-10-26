@@ -26,24 +26,33 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="固定种子评测Alpha Roco checkpoint")
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
-    parser.add_argument("--games", "--repeats", dest="games", type=int, default=100)
+    parser.add_argument("--games", "--repeats", dest="games", type=int, default=256)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     parser.add_argument("--sample", action="store_true")
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=32)
     parser.add_argument("--timeout", type=float, default=20)
+    parser.add_argument("--search", action="store_true")
+    parser.add_argument("--search-top-k", type=int, default=5)
+    parser.add_argument("--search-risk", type=float, default=0.5)
     args = parser.parse_args()
     if args.games < 2:
         raise ValueError("games至少为2")
     if args.workers < 1:
         raise ValueError("workers必须为正数")
+    if args.search_top_k < 1:
+        raise ValueError("search-top-k必须为正数")
+    if not 0 <= args.search_risk <= 1:
+        raise ValueError("search-risk必须在[0,1]内")
     torch.set_num_threads(1)
     torch.manual_seed(args.seed)
     device = torch.device(args.device)
     encoder = ObservationEncoder()
     candidate = load_model(args.candidate, encoder, device)
     reference = load_model(args.reference, encoder, device)
-    tallies = play_match(
+    tally = play_match(
         candidate,
         reference,
         encoder,
@@ -53,9 +62,12 @@ def main() -> None:
         args.sample,
         args.timeout,
         args.workers,
+        search=args.search,
+        search_top_k=args.search_top_k,
+        search_risk=args.search_risk,
     )
-    _print_tally("candidate_side=A vs reference_side=B", tallies["A"])
-    _print_tally("candidate_side=B vs reference_side=A", tallies["B"])
+    label = f"candidate=A vs reference=B search={args.search}"
+    _print_tally(label, tally)
 
 
 if __name__ == "__main__":

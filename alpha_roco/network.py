@@ -22,7 +22,9 @@ class AttentionBlock(nn.Module):
         )
         self.norm2 = nn.LayerNorm(width)
         self.ffn = nn.Sequential(
-            nn.Linear(width, 256), nn.GELU(), nn.Linear(256, width)
+            nn.Linear(width, width * config.ffn_multiplier),
+            nn.GELU(),
+            nn.Linear(width * config.ffn_multiplier, width),
         )
 
     def forward(self, x, mask):
@@ -65,7 +67,10 @@ class CandidateEncoder(nn.Module):
             vocab_sizes["skill"], config.identity_embedding_dim, padding_idx=0
         )
         self.numeric = nn.Sequential(nn.Linear(2, 32), nn.GELU())
-        size = config.category_embedding_dim + config.identity_embedding_dim + 32 + 4
+        self.derived = nn.Sequential(nn.Linear(24, 64), nn.GELU())
+        size = (
+            config.category_embedding_dim + config.identity_embedding_dim + 32 + 4 + 64
+        )
         self.project = nn.Sequential(
             nn.Linear(size, config.hidden_dim),
             nn.GELU(),
@@ -87,7 +92,16 @@ class CandidateEncoder(nn.Module):
             dim=-1,
         )
         return self.project(
-            torch.cat((self.kind(kind), self.skill(skill), numeric, misc), dim=-1)
+            torch.cat(
+                (
+                    self.kind(kind),
+                    self.skill(skill),
+                    numeric,
+                    misc,
+                    self.derived(actions[..., 9:33]),
+                ),
+                dim=-1,
+            )
         )
 
 
@@ -103,7 +117,7 @@ class OpponentModel(nn.Module):
         )
         self.public_pet = nn.Sequential(
             nn.Linear(
-                config.identity_embedding_dim + config.category_embedding_dim + 26,
+                config.identity_embedding_dim + config.category_embedding_dim * 2 + 42,
                 width,
             ),
             nn.GELU(),
@@ -125,9 +139,13 @@ class OpponentModel(nn.Module):
         self.event_action_kind = nn.Embedding(vocab_sizes["action"], 16, padding_idx=0)
         self.event_skill = nn.Embedding(vocab_sizes["skill"], 32, padding_idx=0)
         self.event_encoder = nn.Sequential(
-            nn.Linear(EVENT_FEATURES + 32 + 16 + 32, width), nn.GELU(), nn.LayerNorm(width)
+            nn.Linear(EVENT_FEATURES + 32 + 16 + 32, width),
+            nn.GELU(),
+            nn.LayerNorm(width),
         )
-        self.public_gru = nn.GRUCell(width, width)
+        self.public_gru = nn.GRU(
+            width, width, num_layers=config.gru_layers, batch_first=True
+        )
         self.candidate_encoder = CandidateEncoder(config, vocab_sizes)
         self.candidate_score = nn.Sequential(
             nn.Linear(width * 3, 128), nn.GELU(), nn.Linear(128, 1)
@@ -142,14 +160,18 @@ class OpponentModel(nn.Module):
                     self.event_kind(batch["event_kinds"]),
                     self.event_phase(batch["event_phases"]),
                     self.event_action_kind(batch["event_action_kinds"]),
-                    self.event_skill(_safe_ids(batch["event_skill_ids"], self.event_skill.num_embeddings)),
+                    self.event_skill(
+                        _safe_ids(
+                            batch["event_skill_ids"], self.event_skill.num_embeddings
+                        )
+                    ),
                 ),
                 dim=-1,
             )
         )
         valid = batch["event_public_mask"]
         for index in range(events.shape[1]):
-            next_hidden = self.public_gru(encoded[:, index], hidden)
+            next_hidden = self.public_gru(encoded[:, index : index + 1], hidden)[1]
             hidden = torch.where(valid[:, index, None], next_hidden, hidden)
         return hidden
 
@@ -159,6 +181,7 @@ class OpponentModel(nn.Module):
                 (
                     self.spirit(batch["public_pet_ids"]),
                     self.element(batch["public_pet_elements"]),
+                    self.element(batch["public_pet_sub_elements"]),
                     batch["public_pets"],
                 ),
                 dim=-1,
@@ -174,7 +197,7 @@ class OpponentModel(nn.Module):
         public_hidden = self._events(batch, memory)
         candidates = self.candidate_encoder(batch["opponent_candidates"])
         context = self.decision(
-            torch.cat((state, public_hidden, state * public_hidden), dim=-1)
+            torch.cat((state, public_hidden[-1], state * public_hidden[-1]), dim=-1)
         )
         logits = self.candidate_score(
             torch.cat(
@@ -202,6 +225,7 @@ class AlphaRoco(nn.Module):
             "skill": 600,
             "effect": 128,
             "element": 24,
+            "nature": 34,
             "category": 8,
             "weather": 8,
             "mark": 64,
@@ -215,6 +239,9 @@ class AlphaRoco(nn.Module):
         )
         self.element_embedding = nn.Embedding(
             vocab_sizes["element"], self.config.category_embedding_dim, padding_idx=0
+        )
+        self.nature_embedding = nn.Embedding(
+            vocab_sizes["nature"], self.config.category_embedding_dim, padding_idx=0
         )
         self.skill_embedding = nn.Embedding(
             vocab_sizes["skill"], self.config.identity_embedding_dim, padding_idx=0
@@ -230,7 +257,7 @@ class AlphaRoco(nn.Module):
             nn.Linear(
                 self.config.identity_embedding_dim
                 + self.config.category_embedding_dim * 2
-                + 5,
+                + 14,
                 width,
             ),
             nn.GELU(),
@@ -246,8 +273,8 @@ class AlphaRoco(nn.Module):
         self.pet_encoder = nn.Sequential(
             nn.Linear(
                 self.config.identity_embedding_dim
-                + self.config.category_embedding_dim
-                + 26
+                + self.config.category_embedding_dim * 3
+                + 42
                 + width * 2,
                 256,
             ),
@@ -268,12 +295,18 @@ class AlphaRoco(nn.Module):
         self.battle_attention = AttentionStack(self.config)
         self.self_event_kind = nn.Embedding(vocab_sizes["event"], 16, padding_idx=0)
         self.self_event_phase = nn.Embedding(vocab_sizes["phase"], 16, padding_idx=0)
-        self.self_event_action_kind = nn.Embedding(vocab_sizes["action"], 16, padding_idx=0)
+        self.self_event_action_kind = nn.Embedding(
+            vocab_sizes["action"], 16, padding_idx=0
+        )
         self.self_event_skill = nn.Embedding(vocab_sizes["skill"], 32, padding_idx=0)
         self.self_event_encoder = nn.Sequential(
-            nn.Linear(EVENT_FEATURES + 32 + 16 + 32, width), nn.GELU(), nn.LayerNorm(width)
+            nn.Linear(EVENT_FEATURES + 32 + 16 + 32, width),
+            nn.GELU(),
+            nn.LayerNorm(width),
         )
-        self.self_gru = nn.GRUCell(width, width)
+        self.self_gru = nn.GRU(
+            width, width, num_layers=self.config.gru_layers, batch_first=True
+        )
         self.opponent = OpponentModel(self.config, vocab_sizes)
         self.context = nn.Sequential(
             nn.Linear(width * 3, 256),
@@ -300,6 +333,13 @@ class AlphaRoco(nn.Module):
         self.battle_value = nn.Sequential(
             nn.Linear(width, 128), nn.GELU(), nn.Linear(128, 1)
         )
+        self.aux_damage_dealt = nn.Sequential(
+            nn.Linear(width, 128), nn.GELU(), nn.Linear(128, 1)
+        )
+        self.aux_damage_taken = nn.Sequential(
+            nn.Linear(width, 128), nn.GELU(), nn.Linear(128, 1)
+        )
+        self.aux_ko = nn.Sequential(nn.Linear(width, 128), nn.GELU(), nn.Linear(128, 2))
 
     def _event_memory(self, batch, hidden):
         events = batch["events"]
@@ -310,13 +350,18 @@ class AlphaRoco(nn.Module):
                     self.self_event_kind(batch["event_kinds"]),
                     self.self_event_phase(batch["event_phases"]),
                     self.self_event_action_kind(batch["event_action_kinds"]),
-                    self.self_event_skill(_safe_ids(batch["event_skill_ids"], self.self_event_skill.num_embeddings)),
+                    self.self_event_skill(
+                        _safe_ids(
+                            batch["event_skill_ids"],
+                            self.self_event_skill.num_embeddings,
+                        )
+                    ),
                 ),
                 dim=-1,
             )
         )
         for index in range(events.shape[1]):
-            next_hidden = self.self_gru(encoded[:, index], hidden)
+            next_hidden = self.self_gru(encoded[:, index : index + 1], hidden)[1]
             hidden = torch.where(
                 batch["event_mask"][:, index, None], next_hidden, hidden
             )
@@ -356,6 +401,8 @@ class AlphaRoco(nn.Module):
                 (
                     self.spirit_embedding(batch[f"{prefix}_pet_ids"]),
                     self.element_embedding(batch[f"{prefix}_pet_elements"]),
+                    self.element_embedding(batch[f"{prefix}_pet_sub_elements"]),
+                    self.nature_embedding(batch[f"{prefix}_pet_natures"]),
                     batch[f"{prefix}_pets"],
                     skill_mean,
                     effect_mean,
@@ -392,8 +439,18 @@ class AlphaRoco(nn.Module):
             memory
             if memory is not None
             else (
-                torch.zeros(batch_size, self.config.hidden_dim, device=device),
-                torch.zeros(batch_size, self.config.hidden_dim, device=device),
+                torch.zeros(
+                    self.config.gru_layers,
+                    batch_size,
+                    self.config.hidden_dim,
+                    device=device,
+                ),
+                torch.zeros(
+                    self.config.gru_layers,
+                    batch_size,
+                    self.config.hidden_dim,
+                    device=device,
+                ),
             )
         )
         hidden_self = self._event_memory(batch, hidden_self)
@@ -418,7 +475,9 @@ class AlphaRoco(nn.Module):
         lead_state = self.lead_attention(tokens, token_mask)[:, 0]
         battle_state = self.battle_attention(tokens, token_mask)[:, 0]
         battle_context = self.context(
-            torch.cat((battle_state, hidden_self, hidden_public.detach()), dim=-1)
+            torch.cat(
+                (battle_state, hidden_self[-1], hidden_public[-1].detach()), dim=-1
+            )
         )
         candidates = batch["own_candidates"]
         candidate_base = self.candidate_encoder(candidates)
@@ -471,14 +530,29 @@ class AlphaRoco(nn.Module):
         if not batch["action_mask"].any(dim=1).all():
             raise ValueError("each sample requires at least one own action candidate")
         logits = logits.masked_fill(~batch["action_mask"], -torch.inf)
-        value = torch.where(
-            is_lead,
-            self.lead_value(lead_state).squeeze(-1),
-            self.battle_value(battle_context).squeeze(-1),
-        ).tanh()
+        value = (
+            torch.where(
+                is_lead,
+                self.lead_value(lead_state).squeeze(-1),
+                self.battle_value(battle_context).squeeze(-1),
+            ).tanh()
+            * 2.0
+        )
+        aux = {
+            "damage_dealt": torch.sigmoid(
+                self.aux_damage_dealt(battle_context).squeeze(-1)
+            ),
+            "damage_taken": torch.sigmoid(
+                self.aux_damage_taken(battle_context).squeeze(-1)
+            ),
+            "ko": self.aux_ko(battle_context),
+        }
         return {
             "logits": logits,
+            "base_logits": base_logits,
+            "interactions": interactions,
             "value": value,
+            "aux": aux,
             "opponent_logits": opponent_logits,
             "memory": (hidden_self, hidden_public),
         }
