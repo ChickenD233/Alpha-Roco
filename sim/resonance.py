@@ -89,7 +89,7 @@ def use_magic(
             element=element,
             category=category,
             power=200 if opponent_is_status else 80,
-            energy_cost=0,
+            energy_cost=2,
             desc="应对状态：本次威力+150%",
         )
         wish_skill.counter_target = "status"
